@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: livemory-postgres
+    environment:
+      POSTGRES_DB: livemory
+      POSTGRES_USER: livemory
+      POSTGRES_PASSWORD: livemory
+    ports:
+      - "5432:5432"
+    volumes:
+      - livemory_pg:/var/lib/postgresql/data
+
+volumes:
+  livemory_pg:

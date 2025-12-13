@@ -1,0 +1,32 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IntelliJ / VS Code
+.idea/
+.vscode/
+*.iml
+
+# Flutter
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.packages
+**/build/
+**/.metadata
+
+# Android / iOS
+**/android/.gradle/
+**/android/local.properties
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+
+# Java / Spring / Maven
+**/target/
+**/*.log
+
+# Env
+.env
+.env.*
