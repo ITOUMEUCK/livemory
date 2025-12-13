@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
 
 jobs:
@@ -12,18 +12,38 @@ jobs:
     defaults:
       run:
         working-directory: services/api/livemory-api
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: livemory
+          POSTGRES_USER: livemory
+          POSTGRES_PASSWORD: livemory
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U livemory -d livemory"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
           cache: maven
 
-      - name: Build & test API
+      - name: Build & test
+        env:
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/livemory
+          SPRING_DATASOURCE_USERNAME: livemory
+          SPRING_DATASOURCE_PASSWORD: livemory
         run: mvn -U -B clean verify
 
   mobile:
@@ -32,17 +52,18 @@ jobs:
     defaults:
       run:
         working-directory: apps/mobile
+
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Flutter
+      - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
 
-      - name: Flutter pub get
+      - name: Pub get
         run: flutter pub get
 
       - name: Analyze
