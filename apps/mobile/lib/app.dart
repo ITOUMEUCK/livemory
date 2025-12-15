@@ -5,6 +5,7 @@ import 'core/routes/app_routes.dart';
 import 'core/routes/route_generator.dart';
 import 'features/auth/presentation/providers/auth_provider.dart';
 import 'features/groups/presentation/providers/group_provider.dart';
+import 'features/events/presentation/providers/event_provider.dart';
 
 class LivemoryApp extends StatelessWidget {
   const LivemoryApp({super.key});
@@ -15,6 +16,7 @@ class LivemoryApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => GroupProvider()),
+        ChangeNotifierProvider(create: (_) => EventProvider()),
       ],
       child: MaterialApp(
         title: 'Livemory',

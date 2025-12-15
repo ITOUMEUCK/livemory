@@ -5,6 +5,7 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../groups/presentation/screens/groups_list_screen.dart';
+import '../../../events/presentation/screens/events_list_screen.dart';
 
 /// Écran d'accueil principal avec bottom navigation
 class HomeScreen extends StatefulWidget {
@@ -219,13 +220,7 @@ class _EventsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Événements'),
-        actions: [IconButton(icon: const Icon(Icons.search), onPressed: () {})],
-      ),
-      body: const Center(child: Text('Liste des événements - À implémenter')),
-    );
+    return const EventsListScreen();
   }
 }
 

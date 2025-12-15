@@ -8,6 +8,9 @@ import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/groups/presentation/screens/groups_list_screen.dart';
 import '../../features/groups/presentation/screens/create_group_screen.dart';
 import '../../features/groups/presentation/screens/group_detail_screen.dart';
+import '../../features/events/presentation/screens/events_list_screen.dart';
+import '../../features/events/presentation/screens/create_event_screen.dart';
+import '../../features/events/presentation/screens/event_detail_screen.dart';
 
 /// Générateur de routes pour l'application
 class RouteGenerator {
@@ -36,6 +39,16 @@ class RouteGenerator {
       case AppRoutes.createGroup:
         return _buildSlideRoute(const CreateGroupScreen(), fromBottom: true);
 
+      case AppRoutes.events:
+        return _buildRoute(const EventsListScreen());
+
+      case AppRoutes.createEvent:
+        final groupId = settings.arguments as String?;
+        return _buildSlideRoute(
+          CreateEventScreen(groupId: groupId),
+          fromBottom: true,
+        );
+
       default:
         // Vérifier si c'est une route avec paramètres
         if (settings.name?.startsWith('/groups/') == true &&
@@ -44,15 +57,10 @@ class RouteGenerator {
           return _buildRoute(GroupDetailScreen(groupId: groupId));
         }
 
-        if (settings.name?.startsWith('/events/create') == true) {
-          final groupId = settings.arguments as String?;
-          return _buildSlideRoute(
-            _PlaceholderScreen(
-              name:
-                  'Créer Événement${groupId != null ? ' (Groupe: $groupId)' : ''}',
-            ),
-            fromBottom: true,
-          );
+        if (settings.name?.startsWith('/events/') == true &&
+            settings.name != AppRoutes.createEvent) {
+          final eventId = settings.name!.split('/').last;
+          return _buildRoute(EventDetailScreen(eventId: eventId));
         }
 
         return _buildRoute(_ErrorScreen(routeName: settings.name ?? 'unknown'));
