@@ -1,5 +1,5 @@
 name: mobile
-description: "A new Flutter project."
+description: "Livemory - Orchestrez vos soirées et week-ends entre amis en quelques taps"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -70,8 +70,11 @@ dependencies:
   # URL launcher for payment links
   url_launcher: ^6.3.1
   
-  # Pull to refresh
-  pull_to_refresh: ^2.0.0
+  # Networking
+  connectivity_plus: ^6.1.0
+  
+  # Utils
+  equatable: ^2.0.7
 
 dev_dependencies:
   flutter_test:
