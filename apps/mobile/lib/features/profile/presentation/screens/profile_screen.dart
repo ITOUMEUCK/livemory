@@ -37,15 +37,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final user = authProvider.currentUser;
 
     // Calculer les stats
-    final myGroups = groupProvider.groups.where((g) =>
-      g.memberIds.contains(user?.id)).length;
-    final myEvents = eventProvider.events.where((e) =>
-      e.participantIds.contains(user?.id)).length;
+    final myGroups = groupProvider.groups
+        .where((g) => g.memberIds.contains(user?.id))
+        .length;
+    final myEvents = eventProvider.events
+        .where((e) => e.participantIds.contains(user?.id))
+        .length;
     final totalFriends = groupProvider.groups
-      .expand((g) => g.memberIds)
-      .where((id) => id != user?.id)
-      .toSet()
-      .length;
+        .expand((g) => g.memberIds)
+        .where((id) => id != user?.id)
+        .toSet()
+        .length;
 
     return Scaffold(
       body: CustomScrollView(
@@ -99,8 +101,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           child: CircleAvatar(
                             radius: 50,
-                            backgroundColor:
-                                AppColors.primary.withValues(alpha: 0.1),
+                            backgroundColor: AppColors.primary.withValues(
+                              alpha: 0.1,
+                            ),
                             child: user?.photoUrl != null
                                 ? ClipOval(
                                     child: Image.network(
@@ -127,8 +130,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               color: AppColors.secondary,
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color:
-                                    Theme.of(context).scaffoldBackgroundColor,
+                                color: Theme.of(
+                                  context,
+                                ).scaffoldBackgroundColor,
                                 width: 2,
                               ),
                             ),
@@ -422,8 +426,7 @@ class _ProfileMenuItem extends StatelessWidget {
               ),
             )
           : null,
-      trailing:
-          showArrow ? const Icon(Icons.chevron_right, size: 20) : null,
+      trailing: showArrow ? const Icon(Icons.chevron_right, size: 20) : null,
       onTap: onTap,
     );
   }

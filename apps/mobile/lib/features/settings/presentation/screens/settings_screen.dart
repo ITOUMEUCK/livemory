@@ -11,9 +11,7 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Paramètres'),
-      ),
+      appBar: AppBar(title: const Text('Paramètres')),
       body: ListView(
         children: [
           // Section Apparence
@@ -141,9 +139,9 @@ class SettingsScreen extends StatelessWidget {
   }
 
   static void _showComingSoon(BuildContext context, String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$feature - Bientôt disponible !')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('$feature - Bientôt disponible !')));
   }
 
   static Future<void> _showDeleteAccountDialog(BuildContext context) async {
@@ -238,7 +236,8 @@ class _ThemeSetting extends StatelessWidget {
             _ThemeOption(
               title: 'Clair',
               icon: Icons.light_mode,
-              isSelected: themeProvider.themeMode == app_theme.AppThemeMode.light,
+              isSelected:
+                  themeProvider.themeMode == app_theme.AppThemeMode.light,
               onTap: () {
                 themeProvider.setThemeMode(app_theme.AppThemeMode.light);
                 Navigator.of(context).pop();
@@ -247,7 +246,8 @@ class _ThemeSetting extends StatelessWidget {
             _ThemeOption(
               title: 'Sombre',
               icon: Icons.dark_mode,
-              isSelected: themeProvider.themeMode == app_theme.AppThemeMode.dark,
+              isSelected:
+                  themeProvider.themeMode == app_theme.AppThemeMode.dark,
               onTap: () {
                 themeProvider.setThemeMode(app_theme.AppThemeMode.dark);
                 Navigator.of(context).pop();
@@ -256,7 +256,8 @@ class _ThemeSetting extends StatelessWidget {
             _ThemeOption(
               title: 'Système',
               icon: Icons.auto_awesome,
-              isSelected: themeProvider.themeMode == app_theme.AppThemeMode.system,
+              isSelected:
+                  themeProvider.themeMode == app_theme.AppThemeMode.system,
               onTap: () {
                 themeProvider.setThemeMode(app_theme.AppThemeMode.system);
                 Navigator.of(context).pop();
@@ -286,10 +287,7 @@ class _ThemeOption extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      leading: Icon(
-        icon,
-        color: isSelected ? AppColors.primary : null,
-      ),
+      leading: Icon(icon, color: isSelected ? AppColors.primary : null),
       title: Text(
         title,
         style: TextStyle(
@@ -405,9 +403,7 @@ class _NotificationSetting extends StatelessWidget {
       title: Text(title),
       subtitle: Text(
         subtitle,
-        style: AppTextStyles.bodySmall.copyWith(
-          color: AppColors.textSecondary,
-        ),
+        style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
       ),
       value: value,
       onChanged: onChanged,

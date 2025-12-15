@@ -36,8 +36,8 @@ class LivemoryApp extends StatelessWidget {
             themeMode: themeProvider.themeMode == AppThemeMode.light
                 ? ThemeMode.light
                 : themeProvider.themeMode == AppThemeMode.dark
-                    ? ThemeMode.dark
-                    : ThemeMode.system,
+                ? ThemeMode.dark
+                : ThemeMode.system,
             initialRoute: AppRoutes.splash,
             onGenerateRoute: RouteGenerator.generateRoute,
           );

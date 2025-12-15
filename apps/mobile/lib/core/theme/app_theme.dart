@@ -269,7 +269,9 @@ class AppTheme {
         backgroundColor: const Color(0xFF1E1E1E),
         foregroundColor: Colors.white,
         systemOverlayStyle: SystemUiOverlayStyle.light,
-        titleTextStyle: AppTextStyles.headlineMedium.copyWith(color: Colors.white),
+        titleTextStyle: AppTextStyles.headlineMedium.copyWith(
+          color: Colors.white,
+        ),
         iconTheme: const IconThemeData(color: Colors.white, size: 24),
       ),
 
@@ -327,7 +329,10 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: const Color(0xFF2A2A2A),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
@@ -354,10 +359,16 @@ class AppTheme {
       // ============ Text Theme ============
       textTheme: TextTheme(
         displayLarge: AppTextStyles.displayLarge.copyWith(color: Colors.white),
-        displayMedium: AppTextStyles.displayMedium.copyWith(color: Colors.white),
+        displayMedium: AppTextStyles.displayMedium.copyWith(
+          color: Colors.white,
+        ),
         displaySmall: AppTextStyles.displaySmall.copyWith(color: Colors.white),
-        headlineMedium: AppTextStyles.headlineMedium.copyWith(color: Colors.white),
-        headlineSmall: AppTextStyles.headlineSmall.copyWith(color: Colors.white),
+        headlineMedium: AppTextStyles.headlineMedium.copyWith(
+          color: Colors.white,
+        ),
+        headlineSmall: AppTextStyles.headlineSmall.copyWith(
+          color: Colors.white,
+        ),
         titleLarge: AppTextStyles.titleLarge.copyWith(color: Colors.white),
         titleMedium: AppTextStyles.titleMedium.copyWith(color: Colors.white),
         titleSmall: AppTextStyles.titleSmall.copyWith(color: Colors.white70),
@@ -375,7 +386,9 @@ class AppTheme {
         iconColor: Colors.white70,
         textColor: Colors.white,
         titleTextStyle: AppTextStyles.titleMedium.copyWith(color: Colors.white),
-        subtitleTextStyle: AppTextStyles.bodySmall.copyWith(color: Colors.white60),
+        subtitleTextStyle: AppTextStyles.bodySmall.copyWith(
+          color: Colors.white60,
+        ),
       ),
 
       // ============ Bottom Navigation ============
