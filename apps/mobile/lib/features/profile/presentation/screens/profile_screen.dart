@@ -17,16 +17,21 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   @override
+  @override
   void initState() {
     super.initState();
-    _loadStats();
+    // Utiliser Future.microtask pour éviter l'erreur setState during build
+    Future.microtask(() => _loadStats());
   }
 
   Future<void> _loadStats() async {
-    await Future.wait([
-      context.read<GroupProvider>().fetchGroups(),
-      context.read<EventProvider>().fetchEvents(),
-    ]);
+    final userId = context.read<AuthProvider>().currentUser?.id;
+    if (userId != null) {
+      await Future.wait([
+        context.read<GroupProvider>().fetchGroups(userId),
+        context.read<EventProvider>().fetchEvents(),
+      ]);
+    }
   }
 
   @override

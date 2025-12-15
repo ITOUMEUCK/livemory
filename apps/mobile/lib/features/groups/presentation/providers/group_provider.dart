@@ -1,8 +1,12 @@
 import 'package:flutter/foundation.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../domain/entities/group.dart';
+import '../../../../core/services/firestore_service.dart';
 
 /// Provider pour gérer les groupes
 class GroupProvider with ChangeNotifier {
+  final FirestoreService _firestoreService = FirestoreService();
+
   List<Group> _groups = [];
   Group? _selectedGroup;
   bool _isLoading = false;
@@ -15,54 +19,30 @@ class GroupProvider with ChangeNotifier {
   String? get errorMessage => _errorMessage;
 
   /// Récupérer tous les groupes de l'utilisateur
-  Future<void> fetchGroups() async {
+  Future<void> fetchGroups(String userId) async {
     try {
       _isLoading = true;
       _errorMessage = null;
       notifyListeners();
 
-      // TODO: Remplacer par l'appel API réel
-      await Future.delayed(const Duration(seconds: 1));
+      final querySnapshot = await _firestoreService.query(
+        'groups',
+        field: 'memberIds',
+        whereIn: [userId],
+      );
 
-      // Données de test
-      _groups = [
-        Group(
-          id: 'group_1',
-          name: 'Famille 👨‍👩‍👧‍👦',
-          description: 'Groupe familial pour organiser nos moments ensemble',
-          creatorId: 'user_123',
-          memberIds: List.generate(12, (i) => 'user_$i'),
-          adminIds: ['user_123'],
-          createdAt: DateTime.now().subtract(const Duration(days: 365)),
-          settings: const GroupSettings(),
-        ),
-        Group(
-          id: 'group_2',
-          name: 'Amis Promo 2020',
-          description: 'Les meilleurs souvenirs de promo !',
-          creatorId: 'user_123',
-          memberIds: List.generate(25, (i) => 'user_$i'),
-          adminIds: ['user_123', 'user_1'],
-          createdAt: DateTime.now().subtract(const Duration(days: 180)),
-          settings: const GroupSettings(isPrivate: true),
-        ),
-        Group(
-          id: 'group_3',
-          name: 'Sport & Fun ⚽',
-          description: 'Groupe pour nos activités sportives',
-          creatorId: 'user_456',
-          memberIds: List.generate(8, (i) => 'user_$i'),
-          adminIds: ['user_456'],
-          createdAt: DateTime.now().subtract(const Duration(days: 45)),
-          settings: const GroupSettings(allowMemberInvite: true),
-        ),
-      ];
+      _groups = querySnapshot.docs.map((doc) {
+        return _groupFromFirestore(doc);
+      }).toList();
+
+      // Trier par date de création (plus récents d'abord)
+      _groups.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
       _isLoading = false;
       notifyListeners();
     } catch (e) {
       _isLoading = false;
-      _errorMessage = 'Erreur lors du chargement des groupes';
+      _errorMessage = 'Erreur lors du chargement des groupes: ${e.toString()}';
       notifyListeners();
     }
   }
@@ -80,11 +60,20 @@ class GroupProvider with ChangeNotifier {
       _errorMessage = null;
       notifyListeners();
 
-      // TODO: Remplacer par l'appel API réel
-      await Future.delayed(const Duration(seconds: 1));
+      final groupData = {
+        'name': name,
+        'description': description,
+        'photoUrl': photoUrl,
+        'creatorId': creatorId,
+        'memberIds': [creatorId],
+        'adminIds': [creatorId],
+        'settings': _settingsToMap(settings ?? const GroupSettings()),
+      };
+
+      final groupId = await _firestoreService.create('groups', groupData);
 
       final newGroup = Group(
-        id: 'group_${DateTime.now().millisecondsSinceEpoch}',
+        id: groupId,
         name: name,
         description: description,
         photoUrl: photoUrl,
@@ -101,7 +90,7 @@ class GroupProvider with ChangeNotifier {
       return true;
     } catch (e) {
       _isLoading = false;
-      _errorMessage = 'Erreur lors de la création du groupe';
+      _errorMessage = 'Erreur lors de la création du groupe: ${e.toString()}';
       notifyListeners();
       return false;
     }
@@ -114,8 +103,16 @@ class GroupProvider with ChangeNotifier {
       _errorMessage = null;
       notifyListeners();
 
-      // TODO: Remplacer par l'appel API réel
-      await Future.delayed(const Duration(milliseconds: 500));
+      final groupData = {
+        'name': updatedGroup.name,
+        'description': updatedGroup.description,
+        'photoUrl': updatedGroup.photoUrl,
+        'memberIds': updatedGroup.memberIds,
+        'adminIds': updatedGroup.adminIds,
+        'settings': _settingsToMap(updatedGroup.settings),
+      };
+
+      await _firestoreService.update('groups', updatedGroup.id, groupData);
 
       final index = _groups.indexWhere((g) => g.id == updatedGroup.id);
       if (index != -1) {
@@ -130,7 +127,8 @@ class GroupProvider with ChangeNotifier {
       return true;
     } catch (e) {
       _isLoading = false;
-      _errorMessage = 'Erreur lors de la mise à jour du groupe';
+      _errorMessage =
+          'Erreur lors de la mise à jour du groupe: ${e.toString()}';
       notifyListeners();
       return false;
     }
@@ -143,8 +141,7 @@ class GroupProvider with ChangeNotifier {
       _errorMessage = null;
       notifyListeners();
 
-      // TODO: Remplacer par l'appel API réel
-      await Future.delayed(const Duration(milliseconds: 500));
+      await _firestoreService.delete('groups', groupId);
 
       _groups.removeWhere((g) => g.id == groupId);
       if (_selectedGroup?.id == groupId) {
@@ -156,7 +153,8 @@ class GroupProvider with ChangeNotifier {
       return true;
     } catch (e) {
       _isLoading = false;
-      _errorMessage = 'Erreur lors de la suppression du groupe';
+      _errorMessage =
+          'Erreur lors de la suppression du groupe: ${e.toString()}';
       notifyListeners();
       return false;
     }
@@ -174,7 +172,7 @@ class GroupProvider with ChangeNotifier {
       );
       return await updateGroup(updatedGroup);
     } catch (e) {
-      _errorMessage = 'Erreur lors de l\'ajout du membre';
+      _errorMessage = 'Erreur lors de l\'ajout du membre: ${e.toString()}';
       notifyListeners();
       return false;
     }
@@ -196,7 +194,7 @@ class GroupProvider with ChangeNotifier {
       );
       return await updateGroup(updatedGroup);
     } catch (e) {
-      _errorMessage = 'Erreur lors du retrait du membre';
+      _errorMessage = 'Erreur lors du retrait du membre: ${e.toString()}';
       notifyListeners();
       return false;
     }
@@ -217,7 +215,7 @@ class GroupProvider with ChangeNotifier {
       }
       return true;
     } catch (e) {
-      _errorMessage = 'Erreur lors de la promotion';
+      _errorMessage = 'Erreur lors de la promotion: ${e.toString()}';
       notifyListeners();
       return false;
     }
@@ -242,5 +240,45 @@ class GroupProvider with ChangeNotifier {
   void clearError() {
     _errorMessage = null;
     notifyListeners();
+  }
+
+  // ==================== MÉTHODES PRIVÉES ====================
+
+  /// Convertir un document Firestore en Group
+  Group _groupFromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+
+    return Group(
+      id: doc.id,
+      name: data['name'] as String,
+      description: data['description'] as String?,
+      photoUrl: data['photoUrl'] as String?,
+      creatorId: data['creatorId'] as String,
+      memberIds: List<String>.from(data['memberIds'] ?? []),
+      adminIds: List<String>.from(data['adminIds'] ?? []),
+      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      updatedAt: data['updatedAt'] != null
+          ? (data['updatedAt'] as Timestamp).toDate()
+          : null,
+      settings: _settingsFromMap(data['settings'] as Map<String, dynamic>?),
+    );
+  }
+
+  /// Convertir GroupSettings en Map
+  Map<String, dynamic> _settingsToMap(GroupSettings settings) {
+    return {
+      'isPrivate': settings.isPrivate,
+      'allowMemberInvite': settings.allowMemberInvite,
+    };
+  }
+
+  /// Convertir Map en GroupSettings
+  GroupSettings _settingsFromMap(Map<String, dynamic>? data) {
+    if (data == null) return const GroupSettings();
+
+    return GroupSettings(
+      isPrivate: data['isPrivate'] as bool? ?? false,
+      allowMemberInvite: data['allowMemberInvite'] as bool? ?? false,
+    );
   }
 }

@@ -6,6 +6,7 @@ import '../../../../core/routes/app_routes.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../shared/widgets/common/common_widgets.dart';
 import '../providers/group_provider.dart';
+import '../../../../features/auth/presentation/providers/auth_provider.dart';
 import '../../domain/entities/group.dart';
 
 /// Écran liste des groupes
@@ -21,7 +22,10 @@ class _GroupsListScreenState extends State<GroupsListScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<GroupProvider>().fetchGroups();
+      final userId = context.read<AuthProvider>().currentUser?.id;
+      if (userId != null) {
+        context.read<GroupProvider>().fetchGroups(userId);
+      }
     });
   }
 
@@ -48,7 +52,12 @@ class _GroupsListScreenState extends State<GroupsListScreen> {
           if (groupProvider.errorMessage != null) {
             return ErrorView(
               message: groupProvider.errorMessage!,
-              onRetry: () => groupProvider.fetchGroups(),
+              onRetry: () {
+                final userId = context.read<AuthProvider>().currentUser?.id;
+                if (userId != null) {
+                  groupProvider.fetchGroups(userId);
+                }
+              },
             );
           }
 
@@ -66,7 +75,12 @@ class _GroupsListScreenState extends State<GroupsListScreen> {
           }
 
           return RefreshIndicator(
-            onRefresh: () => groupProvider.fetchGroups(),
+            onRefresh: () async {
+              final userId = context.read<AuthProvider>().currentUser?.id;
+              if (userId != null) {
+                await groupProvider.fetchGroups(userId);
+              }
+            },
             child: ListView.separated(
               padding: const EdgeInsets.all(16),
               itemCount: groupProvider.groups.length,
