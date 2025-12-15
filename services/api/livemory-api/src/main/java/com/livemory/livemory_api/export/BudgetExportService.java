@@ -62,10 +62,10 @@ public class BudgetExportService {
             writer.writeNext(new String[] {});
 
             // Budget summary
-            writer.writeNext(new String[] { "Budget Total", budget.getTotalAmount().toString() });
-            writer.writeNext(new String[] { "Total Dépensé", budget.getSpentAmount().toString() });
+            writer.writeNext(new String[] { "Budget Total", budget.getTotalBudget().toString() });
+            writer.writeNext(new String[] { "Total Dépensé", budget.getTotalSpent().toString() });
             writer.writeNext(
-                    new String[] { "Reste", budget.getTotalAmount().subtract(budget.getSpentAmount()).toString() });
+                    new String[] { "Reste", budget.getTotalBudget().subtract(budget.getTotalSpent()).toString() });
             writer.writeNext(new String[] {});
 
             // Payments header
@@ -119,7 +119,7 @@ public class BudgetExportService {
             // Budget summary
             createRow(sheet, rowNum++, "Budget Total:", budget.getTotalBudget(), currencyStyle);
             createRow(sheet, rowNum++, "Total Dépensé:", budget.getTotalSpent(), currencyStyle);
-            createRow(sheet, rowNum++, "Reste:", budget.getTotalBudget().subtract(budget.getTotalSpent()), currencyStyle);
+            createRow(sheet, rowNum++, "Reste:", budget.getTotalBudget().subtract(budget.getTotalSpent()),
                     currencyStyle);
 
             rowNum++; // Empty row

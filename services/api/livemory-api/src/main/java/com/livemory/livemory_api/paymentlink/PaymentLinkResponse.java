@@ -31,7 +31,6 @@ public record PaymentLinkResponse(
                 paymentLink.getDescription(),
                 paymentLink.getCreatedBy().getId(),
                 createdByName,
-                paymentLink.getCreatedBy().getName(),
                 paymentLink.getStatus(),
                 paymentLink.getExpiresAt(),
                 paymentLink.getCreatedAt());
