@@ -1,0 +1,10 @@
+-- Insert system templates
+INSERT INTO event_templates (name, description, event_type, icon, default_duration_hours, suggested_tasks, suggested_budget_categories, is_system_template) VALUES
+('Soirée classique', 'Template pour une soirée entre amis', 'PARTY', '🎉', 5, '["Apporter les boissons", "Préparer la playlist", "Acheter les snacks", "Décoration"]', '["Boissons", "Nourriture", "Décoration"]', TRUE),
+('Week-end détente', 'Template pour un week-end entre amis', 'WEEKEND', '🏖️', 48, '["Réserver l''hébergement", "Planifier les activités", "Organiser le transport", "Liste des courses"]', '["Hébergement", "Transport", "Nourriture", "Activités"]', TRUE),
+('Voyage/Vacances', 'Template pour des vacances en groupe', 'TRIP', '✈️', 168, '["Réserver les billets", "Réserver l''hôtel", "Planifier l''itinéraire", "Assurances voyage", "Liste de bagages"]', '["Transport", "Hébergement", "Nourriture", "Activités", "Assurances"]', TRUE),
+('Restaurant', 'Template pour une sortie resto', 'RESTAURANT', '🍽️', 3, '["Réserver la table", "Choisir le menu", "Organiser le transport"]', '["Restaurant", "Transport", "Pourboire"]', TRUE),
+('Pique-nique', 'Template pour un pique-nique', 'OUTDOOR', '🧺', 4, '["Choisir le lieu", "Préparer les plats", "Matériel (couverture, jeux)", "Vérifier la météo"]', '["Nourriture", "Boissons", "Matériel"]', TRUE),
+('Anniversaire', 'Template pour fêter un anniversaire', 'BIRTHDAY', '🎂', 4, '["Commander le gâteau", "Cadeaux", "Invitations", "Décoration", "Animation"]', '["Gâteau", "Cadeaux", "Décoration", "Nourriture", "Boissons"]', TRUE),
+('Activité sportive', 'Template pour une activité sportive', 'SPORT', '⚽', 3, '["Réserver le terrain/salle", "Liste des participants", "Matériel nécessaire"]', '["Location", "Matériel", "Boissons"]', TRUE),
+('Soirée jeux', 'Template pour une soirée jeux de société', 'GAME_NIGHT', '🎲', 4, '["Sélection des jeux", "Préparer les snacks", "Organiser les équipes"]', '["Nourriture", "Boissons", "Jeux (si achat)"]', TRUE);

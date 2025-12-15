@@ -34,6 +34,44 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
+  
+  # State management
+  provider: ^6.1.2
+  
+  # HTTP client
+  http: ^1.2.2
+  dio: ^5.7.0
+  
+  # JSON serialization
+  json_annotation: ^4.9.0
+  
+  # Image picker and media
+  image_picker: ^1.1.2
+  video_player: ^2.9.2
+  photo_view: ^0.15.0
+  
+  # Storage
+  shared_preferences: ^2.3.3
+  
+  # UI components
+  intl: ^0.20.1
+  flutter_svg: ^2.0.10+1
+  cached_network_image: ^3.4.1
+  
+  # Date/Time picker
+  flutter_datetime_picker_plus: ^2.2.0
+  
+  # Charts for budget
+  fl_chart: ^0.69.2
+  
+  # File picker
+  file_picker: ^8.1.4
+  
+  # URL launcher for payment links
+  url_launcher: ^6.3.1
+  
+  # Pull to refresh
+  pull_to_refresh: ^2.0.0
 
 dev_dependencies:
   flutter_test:
@@ -45,6 +83,10 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  
+  # Code generation
+  build_runner: ^2.4.13
+  json_serializable: ^6.8.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -54,9 +96,9 @@ flutter:
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
-  # the material Icons class.
-  uses-material-design: true
-
+  assets:
+    - assets/images/
+    - assets/icons/
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg
