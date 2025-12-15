@@ -311,33 +311,161 @@ service firebase.storage {
 }
 ```
 
-## 🔔 Étape 8: Configurer Firebase Cloud Messaging (Notifications Push)
+## � Étape 8: Créer les Indexes Firestore (Optimisation des Requêtes)
 
-### 8.1 Pour Web
+### 8.1 Pourquoi les Indexes sont Nécessaires
+
+Firestore nécessite des **indexes composés** pour les requêtes utilisant plusieurs champs (ex: filtrer par userId ET trier par date). Sans ces indexes, vos requêtes échoueront en production.
+
+### 8.2 Méthode 1: Déploiement Automatique (Recommandé)
+
+Un fichier `firestore.indexes.json` a été créé à la racine du projet avec tous les indexes nécessaires.
+
+**Étapes:**
+
+1. Installez Firebase CLI (si pas déjà fait):
+   ```bash
+   npm install -g firebase-tools
+   ```
+
+2. Connectez-vous à Firebase:
+   ```bash
+   firebase login
+   ```
+
+3. Initialisez Firebase dans le projet:
+   ```bash
+   firebase init firestore
+   ```
+   - Sélectionnez votre projet Firebase
+   - Firestore rules: `firestore.rules` (ou laissez par défaut)
+   - Firestore indexes: `firestore.indexes.json` ✅
+
+4. Déployez les indexes:
+   ```bash
+   firebase deploy --only firestore:indexes
+   ```
+
+5. Attendez la création (2-5 minutes selon le nombre d'indexes)
+
+### 8.3 Méthode 2: Création Manuelle (Firebase Console)
+
+Si vous préférez créer manuellement les indexes:
+
+1. Allez dans **Firebase Console → Firestore Database → Indexes**
+2. Cliquez sur **"Créer un index"**
+
+**Index 1: Groups par membre et date**
+- Collection: `groups`
+- Champs:
+  * `memberIds` → Array-contains
+  * `createdAt` → Descending
+- Statut de la requête: Collection
+- Cliquez sur **"Créer"**
+
+**Index 2: Events par groupe et date**
+- Collection: `events`
+- Champs:
+  * `groupId` → Ascending
+  * `startDate` → Ascending
+- Statut de la requête: Collection
+
+**Index 3: Events par participant et date**
+- Collection: `events`
+- Champs:
+  * `participantIds` → Array-contains
+  * `startDate` → Ascending
+- Statut de la requête: Collection
+
+**Index 4: Polls par événement et date**
+- Collection: `polls`
+- Champs:
+  * `eventId` → Ascending
+  * `createdAt` → Descending
+- Statut de la requête: Collection
+
+**Index 5: Budgets par événement et date**
+- Collection: `budgets`
+- Champs:
+  * `eventId` → Ascending
+  * `createdAt` → Descending
+- Statut de la requête: Collection
+
+**Index 6: Notifications par utilisateur, statut et date**
+- Collection: `notifications`
+- Champs:
+  * `userId` → Ascending
+  * `isRead` → Ascending
+  * `createdAt` → Descending
+- Statut de la requête: Collection
+
+**Index 7: Notifications par utilisateur et date**
+- Collection: `notifications`
+- Champs:
+  * `userId` → Ascending
+  * `createdAt` → Descending
+- Statut de la requête: Collection
+
+### 8.4 Vérifier les Indexes
+
+Dans **Firebase Console → Firestore Database → Indexes**:
+- ✅ Statut: **Activé** (vert)
+- ⏳ Statut: **Création en cours** (orange) → Patientez
+
+### 8.5 Indexes Automatiques (Pas besoin de créer)
+
+Firestore crée automatiquement des indexes simples pour:
+- ✅ Requêtes sur un seul champ
+- ✅ Tri sur un seul champ
+- ✅ Égalité sur plusieurs champs (sans tri)
+
+Les indexes composés ci-dessus sont nécessaires uniquement pour:
+- 🔍 Filtrage + Tri (ex: `where('userId', '==', uid).orderBy('createdAt')`)
+- 🔍 Array-contains + Tri (ex: `where('memberIds', 'array-contains', uid).orderBy('createdAt')`)
+- 🔍 Plusieurs filtres + Tri
+
+### 8.6 Tester les Indexes
+
+Après création, testez vos requêtes:
+
+```dart
+// Dans votre app, cette requête utilisera l'index créé
+await FirebaseFirestore.instance
+  .collection('groups')
+  .where('memberIds', arrayContains: userId)
+  .orderBy('createdAt', descending: true)
+  .get();
+```
+
+Si un index manque, Firestore affichera une erreur avec un **lien direct** pour créer l'index automatiquement.
+
+## 🔔 Étape 9: Configurer Firebase Cloud Messaging (Notifications Push)
+
+### 9.1 Pour Web
 
 1. Firebase Console → **Project Settings** → **Cloud Messaging**
 2. Sous **Web configuration**, cliquez sur **"Générer une paire de clés"**
 3. Copiez le **Jeton de serveur**
 4. Utilisez-le dans votre code web
 
-### 8.2 Pour Android
+### 9.2 Pour Android
 
 Déjà configuré avec `google-services.json`!
 
-### 8.3 Pour iOS
+### 9.3 Pour iOS
 
 1. Téléchargez le certificat APNs depuis Apple Developer
 2. Uploadez-le dans **Project Settings** → **Cloud Messaging** → **APNs Certificates**
 
-## 🧪 Étape 9: Tester la Configuration
+## 🧪 Étape 10: Tester la Configuration
 
-### 9.1 Installer les Dépendances
+### 10.1 Installer les Dépendances
 
 ```bash
 flutter pub get
 ```
 
-### 9.2 Lancer l'Application
+### 10.2 Lancer l'Application
 
 ```bash
 # Web
@@ -350,7 +478,7 @@ flutter run -d android
 flutter run -d ios
 ```
 
-### 9.3 Vérifier l'Initialisation
+### 10.3 Vérifier l'Initialisation
 
 Dans la console, vous devriez voir:
 
@@ -358,11 +486,18 @@ Dans la console, vous devriez voir:
 ✅ Firebase initialisé avec succès
 ```
 
-### 9.4 Tester l'Authentification
+### 10.4 Tester l'Authentification
 
 1. Créez un compte avec email/password
 2. Vérifiez dans **Firebase Console → Authentication → Users** que l'utilisateur apparaît
 3. Vérifiez dans **Firestore → users** que le document utilisateur est créé
+
+### 10.5 Tester les Indexes
+
+1. Créez un groupe et ajoutez-vous comme membre
+2. Allez dans l'onglet Groupes
+3. Si les indexes sont corrects, la liste se charge instantanément
+4. Si un index manque, vous verrez une erreur dans la console avec un lien pour le créer
 
 ## 🔍 Résolution de Problèmes
 

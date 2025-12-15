@@ -1,0 +1,109 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ============ Helper Functions ============
+    
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    function isMember(groupId) {
+      return isSignedIn() && 
+        request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.memberIds;
+    }
+    
+    // ============ Collections ============
+    
+    // Users collection
+    match /users/{userId} {
+      // Tout utilisateur authentifié peut lire les profils
+      allow read: if isSignedIn();
+      // Seul le propriétaire peut modifier son profil
+      allow create, update: if isOwner(userId);
+      // Impossible de supprimer un utilisateur
+      allow delete: if false;
+    }
+    
+    // Groups collection
+    match /groups/{groupId} {
+      // Seuls les membres peuvent lire le groupe
+      allow read: if isSignedIn() && 
+        request.auth.uid in resource.data.memberIds;
+      
+      // Tout utilisateur authentifié peut créer un groupe
+      allow create: if isSignedIn() && 
+        request.auth.uid == request.resource.data.createdBy &&
+        request.auth.uid in request.resource.data.memberIds;
+      
+      // Seul le créateur peut modifier ou supprimer
+      allow update, delete: if isSignedIn() && 
+        request.auth.uid == resource.data.createdBy;
+    }
+    
+    // Events collection
+    match /events/{eventId} {
+      // Tout utilisateur authentifié peut lire les événements
+      allow read: if isSignedIn();
+      
+      // Tout utilisateur authentifié peut créer un événement
+      allow create: if isSignedIn() && 
+        request.auth.uid == request.resource.data.createdBy;
+      
+      // Seul le créateur peut modifier ou supprimer
+      allow update, delete: if isSignedIn() && 
+        request.auth.uid == resource.data.createdBy;
+    }
+    
+    // Polls collection
+    match /polls/{pollId} {
+      // Tout utilisateur authentifié peut lire les sondages
+      allow read: if isSignedIn();
+      
+      // Tout utilisateur authentifié peut créer un sondage
+      allow create: if isSignedIn() && 
+        request.auth.uid == request.resource.data.creatorId;
+      
+      // Tout membre peut voter (update pour ajouter son vote)
+      allow update: if isSignedIn();
+      
+      // Seul le créateur peut supprimer
+      allow delete: if isSignedIn() && 
+        request.auth.uid == resource.data.creatorId;
+    }
+    
+    // Budgets collection
+    match /budgets/{budgetId} {
+      // Tout utilisateur authentifié peut lire les budgets
+      allow read: if isSignedIn();
+      
+      // Tout utilisateur authentifié peut créer un budget
+      allow create: if isSignedIn();
+      
+      // Les participants peuvent modifier (ajouter dépenses, marquer payé)
+      allow update: if isSignedIn() && 
+        request.auth.uid in resource.data.participantIds;
+      
+      // Seul l'utilisateur peut supprimer son budget
+      allow delete: if isSignedIn();
+    }
+    
+    // Notifications collection
+    match /notifications/{notificationId} {
+      // Seul le destinataire peut lire ses notifications
+      allow read: if isSignedIn() && 
+        request.auth.uid == resource.data.userId;
+      
+      // Tout utilisateur authentifié peut créer une notification
+      allow create: if isSignedIn();
+      
+      // Seul le destinataire peut modifier (marquer lu) ou supprimer
+      allow update, delete: if isSignedIn() && 
+        request.auth.uid == resource.data.userId;
+    }
+  }
+}

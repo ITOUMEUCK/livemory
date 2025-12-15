@@ -1,8 +1,37 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
 /// Service Firestore pour les opérations CRUD
 class FirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  static bool _persistenceEnabled = false;
+
+  // ==================== INITIALIZATION ====================
+
+  /// Initialiser Firestore avec persistance offline
+  Future<void> initialize() async {
+    if (_persistenceEnabled) return;
+
+    try {
+      if (kIsWeb) {
+        // Web: Utiliser IndexedDB pour la persistance
+        await _firestore.enablePersistence(
+          const PersistenceSettings(synchronizeTabs: true),
+        );
+        debugPrint('✅ Firestore Web persistence enabled');
+      } else {
+        // Mobile/Desktop: Persistance activée par défaut, configurer la taille du cache
+        _firestore.settings = const Settings(
+          persistenceEnabled: true,
+          cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+        );
+        debugPrint('✅ Firestore Mobile persistence enabled');
+      }
+      _persistenceEnabled = true;
+    } catch (e) {
+      debugPrint('⚠️ Firestore persistence already enabled or error: $e');
+    }
+  }
 
   // ==================== COLLECTIONS ====================
 
