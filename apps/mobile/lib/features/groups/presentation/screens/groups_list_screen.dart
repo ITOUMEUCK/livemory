@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/theme/app_breakpoints.dart';
 import '../../../../core/routes/app_routes.dart';
-import '../../../../core/constants/app_constants.dart';
 import '../../../../shared/widgets/common/common_widgets.dart';
+import '../../../../shared/widgets/layouts/responsive_widgets.dart';
 import '../providers/group_provider.dart';
 import '../../../../features/auth/presentation/providers/auth_provider.dart';
 import '../../domain/entities/group.dart';
@@ -81,22 +82,61 @@ class _GroupsListScreenState extends State<GroupsListScreen> {
                 await groupProvider.fetchGroups(userId);
               }
             },
-            child: ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: groupProvider.groups.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final group = groupProvider.groups[index];
-                return _GroupCard(
-                  group: group,
-                  onTap: () {
-                    groupProvider.selectGroup(group.id);
-                    Navigator.of(
-                      context,
-                    ).pushNamed(AppRoutes.groupDetail, arguments: group.id);
-                  },
-                );
-              },
+            child: ResponsiveLayout(
+              // Mobile: ListView vertical
+              mobile: ListView.separated(
+                padding: const EdgeInsets.all(16),
+                itemCount: groupProvider.groups.length,
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final group = groupProvider.groups[index];
+                  return _GroupCard(
+                    group: group,
+                    onTap: () {
+                      groupProvider.selectGroup(group.id);
+                      Navigator.of(
+                        context,
+                      ).pushNamed(AppRoutes.groupDetail, arguments: group.id);
+                    },
+                  );
+                },
+              ),
+              // Tablette/Desktop: GridView
+              tablet: LayoutBuilder(
+                builder: (context, constraints) {
+                  final columns = AppBreakpoints.getGridColumns(
+                    constraints.maxWidth,
+                  );
+                  final padding = AppBreakpoints.getHorizontalPadding(
+                    constraints.maxWidth,
+                  );
+
+                  return GridView.builder(
+                    padding: EdgeInsets.all(padding),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: columns,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      childAspectRatio: 1.2,
+                    ),
+                    itemCount: groupProvider.groups.length,
+                    itemBuilder: (context, index) {
+                      final group = groupProvider.groups[index];
+                      return _GroupCard(
+                        group: group,
+                        onTap: () {
+                          groupProvider.selectGroup(group.id);
+                          Navigator.of(context).pushNamed(
+                            AppRoutes.groupDetail,
+                            arguments: group.id,
+                          );
+                        },
+                      );
+                    },
+                  );
+                },
+              ),
             ),
           );
         },

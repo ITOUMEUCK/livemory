@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/routes/app_routes.dart';
-import '../../../../shared/widgets/common/common_widgets.dart';
 import '../providers/group_provider.dart';
 import '../../domain/entities/group.dart';
 

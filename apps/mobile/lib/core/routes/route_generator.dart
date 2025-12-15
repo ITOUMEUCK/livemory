@@ -133,15 +133,6 @@ class RouteGenerator {
     );
   }
 
-  static PageRouteBuilder _buildFadeRoute(Widget screen) {
-    return PageRouteBuilder(
-      pageBuilder: (context, animation, secondaryAnimation) => screen,
-      transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        return FadeTransition(opacity: animation, child: child);
-      },
-    );
-  }
-
   static PageRouteBuilder _buildSlideRoute(
     Widget screen, {
     bool fromBottom = false,
@@ -163,30 +154,6 @@ class RouteGenerator {
 
         return SlideTransition(position: offsetAnimation, child: child);
       },
-    );
-  }
-}
-
-/// Écran placeholder temporaire
-class _PlaceholderScreen extends StatelessWidget {
-  final String name;
-
-  const _PlaceholderScreen({required this.name});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(name)),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.construction, size: 64, color: Colors.grey),
-            const SizedBox(height: 16),
-            Text('$name - Coming Soon', style: const TextStyle(fontSize: 20)),
-          ],
-        ),
-      ),
     );
   }
 }

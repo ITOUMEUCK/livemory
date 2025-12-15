@@ -469,7 +469,5 @@ class _StepData {
     required this.description,
     required this.startDateTime,
     required this.order,
-    this.endDateTime,
-    this.location,
   });
 }

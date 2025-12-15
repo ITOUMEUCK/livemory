@@ -1,13 +1,19 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
-import '../../domain/entities/notification.dart';
+import 'package:mobile/core/services/firestore_service.dart';
+import 'package:mobile/features/notifications/domain/entities/notification.dart';
 
 /// Provider pour la gestion des notifications
 class NotificationProvider with ChangeNotifier {
+  final FirestoreService _firestoreService = FirestoreService();
+
   List<Notification> _notifications = [];
   bool _isLoading = false;
+  String? _errorMessage;
 
   List<Notification> get notifications => _notifications;
   bool get isLoading => _isLoading;
+  String? get errorMessage => _errorMessage;
 
   /// Nombre de notifications non lues
   int get unreadCount => _notifications.where((notif) => !notif.isRead).length;
@@ -20,52 +26,85 @@ class NotificationProvider with ChangeNotifier {
   List<Notification> get readNotifications =>
       _notifications.where((notif) => notif.isRead).toList();
 
-  /// Récupérer toutes les notifications
-  Future<void> fetchNotifications() async {
+  /// Récupérer toutes les notifications d'un utilisateur
+  Future<void> fetchNotifications(String userId) async {
     _isLoading = true;
+    _errorMessage = null;
     notifyListeners();
 
     try {
-      await Future.delayed(const Duration(milliseconds: 800));
+      final querySnapshot = await _firestoreService.query(
+        'notifications',
+        field: 'userId',
+        isEqualTo: userId,
+      );
 
-      _notifications = _getMockNotifications();
+      _notifications = querySnapshot.docs
+          .map((doc) => _notificationFromFirestore(doc))
+          .toList();
+
+      // Trier par date décroissante
       _notifications.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    } catch (e) {
-      debugPrint('Erreur lors du chargement des notifications: $e');
-    } finally {
+
       _isLoading = false;
       notifyListeners();
+    } catch (e) {
+      _errorMessage = 'Erreur lors de la récupération des notifications: $e';
+      _isLoading = false;
+      notifyListeners();
+      debugPrint(_errorMessage);
     }
   }
 
   /// Créer une nouvelle notification
-  Future<void> createNotification({
+  Future<Notification?> createNotification({
+    required String userId,
     required NotificationType type,
     required String title,
     required String message,
     Map<String, dynamic>? metadata,
   }) async {
     try {
-      final notification = Notification(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        type: type,
-        title: title,
-        message: message,
-        metadata: metadata ?? {},
-        createdAt: DateTime.now(),
+      final notificationData = {
+        'userId': userId,
+        'type': _typeToString(type),
+        'title': title,
+        'message': message,
+        'metadata': metadata ?? {},
+        'isRead': false,
+        'createdAt': FieldValue.serverTimestamp(),
+      };
+
+      final notificationId = await _firestoreService.create(
+        'notifications',
+        notificationData,
       );
 
-      _notifications.insert(0, notification);
+      // Récupérer le document créé
+      final docSnapshot = await _firestoreService.read(
+        'notifications',
+        notificationId,
+      );
+      final newNotification = _notificationFromFirestore(docSnapshot);
+
+      _notifications.insert(0, newNotification);
       notifyListeners();
+
+      return newNotification;
     } catch (e) {
-      debugPrint('Erreur lors de la création de la notification: $e');
+      _errorMessage = 'Erreur lors de la création de la notification: $e';
+      notifyListeners();
+      debugPrint(_errorMessage);
+      return null;
     }
   }
 
   /// Marquer une notification comme lue
   Future<void> markAsRead(String notificationId) async {
     try {
-      await Future.delayed(const Duration(milliseconds: 300));
+      await _firestoreService.update('notifications', notificationId, {
+        'isRead': true,
+      });
 
       final index = _notifications.indexWhere(
         (notif) => notif.id == notificationId,
@@ -75,14 +114,18 @@ class NotificationProvider with ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      debugPrint('Erreur lors du marquage comme lu: $e');
+      _errorMessage = 'Erreur lors du marquage comme lu: $e';
+      notifyListeners();
+      debugPrint(_errorMessage);
     }
   }
 
   /// Marquer une notification comme non lue
   Future<void> markAsUnread(String notificationId) async {
     try {
-      await Future.delayed(const Duration(milliseconds: 300));
+      await _firestoreService.update('notifications', notificationId, {
+        'isRead': false,
+      });
 
       final index = _notifications.indexWhere(
         (notif) => notif.id == notificationId,
@@ -92,45 +135,74 @@ class NotificationProvider with ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      debugPrint('Erreur lors du marquage comme non lu: $e');
+      _errorMessage = 'Erreur lors du marquage comme non lu: $e';
+      notifyListeners();
+      debugPrint(_errorMessage);
     }
   }
 
   /// Marquer toutes les notifications comme lues
-  Future<void> markAllAsRead() async {
+  Future<void> markAllAsRead(String userId) async {
     try {
-      await Future.delayed(const Duration(milliseconds: 500));
+      // Batch update pour toutes les notifications non lues de l'utilisateur
+      final batch = FirebaseFirestore.instance.batch();
+      final unreadNotifs = _notifications.where((n) => !n.isRead).toList();
+
+      for (final notif in unreadNotifs) {
+        final docRef = FirebaseFirestore.instance
+            .collection('notifications')
+            .doc(notif.id);
+        batch.update(docRef, {'isRead': true});
+      }
+
+      await batch.commit();
 
       _notifications = _notifications
           .map((notif) => notif.isRead ? notif : notif.markAsRead())
           .toList();
       notifyListeners();
     } catch (e) {
-      debugPrint('Erreur lors du marquage de toutes comme lues: $e');
+      _errorMessage = 'Erreur lors du marquage de toutes comme lues: $e';
+      notifyListeners();
+      debugPrint(_errorMessage);
     }
   }
 
   /// Supprimer une notification
   Future<void> deleteNotification(String notificationId) async {
     try {
-      await Future.delayed(const Duration(milliseconds: 300));
-
+      await _firestoreService.delete('notifications', notificationId);
       _notifications.removeWhere((notif) => notif.id == notificationId);
       notifyListeners();
     } catch (e) {
-      debugPrint('Erreur lors de la suppression de la notification: $e');
+      _errorMessage = 'Erreur lors de la suppression de la notification: $e';
+      notifyListeners();
+      debugPrint(_errorMessage);
     }
   }
 
   /// Supprimer toutes les notifications lues
   Future<void> deleteAllRead() async {
     try {
-      await Future.delayed(const Duration(milliseconds: 500));
+      final batch = FirebaseFirestore.instance.batch();
+      final readNotifs = _notifications.where((n) => n.isRead).toList();
+
+      for (final notif in readNotifs) {
+        final docRef = FirebaseFirestore.instance
+            .collection('notifications')
+            .doc(notif.id);
+        batch.delete(docRef);
+      }
+
+      await batch.commit();
 
       _notifications.removeWhere((notif) => notif.isRead);
       notifyListeners();
     } catch (e) {
-      debugPrint('Erreur lors de la suppression des notifications lues: $e');
+      _errorMessage =
+          'Erreur lors de la suppression des notifications lues: $e';
+      notifyListeners();
+      debugPrint(_errorMessage);
     }
   }
 
@@ -176,140 +248,52 @@ class NotificationProvider with ChangeNotifier {
     return grouped;
   }
 
-  /// Données mock pour les notifications
-  List<Notification> _getMockNotifications() {
-    final now = DateTime.now();
+  // Méthodes de conversion Firestore
 
-    return [
-      // Aujourd'hui
-      Notification(
-        id: '1',
-        type: NotificationType.paymentRequest,
-        title: 'Demande de remboursement',
-        message: 'Alice vous demande 35€ pour les courses du week-end ski',
-        metadata: {
-          'budgetId': '1',
-          'userId': '2',
-          'userName': 'Alice Martin',
-          'amount': 35.0,
-        },
-        createdAt: now.subtract(const Duration(minutes: 15)),
-      ),
-      Notification(
-        id: '2',
-        type: NotificationType.pollCreated,
-        title: 'Nouveau sondage',
-        message: 'Bob a créé un sondage "Date pour le barbecue d\'été"',
-        metadata: {
-          'pollId': '3',
-          'eventId': '2',
-          'userId': '3',
-          'userName': 'Bob Wilson',
-        },
-        isRead: true,
-        createdAt: now.subtract(const Duration(hours: 2)),
-      ),
-      Notification(
-        id: '3',
-        type: NotificationType.eventReminder,
-        title: 'Rappel d\'événement',
-        message: 'Week-end Ski commence demain à 14h00',
-        metadata: {'eventId': '1', 'groupId': '1'},
-        createdAt: now.subtract(const Duration(hours: 5)),
-      ),
+  Notification _notificationFromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
 
-      // Hier
-      Notification(
-        id: '4',
-        type: NotificationType.expenseAdded,
-        title: 'Nouvelle dépense',
-        message: 'David a ajouté une dépense de 240€ (Forfaits ski)',
-        metadata: {
-          'budgetId': '1',
-          'eventId': '1',
-          'userId': '4',
-          'userName': 'David Chen',
-          'amount': 240.0,
-        },
-        isRead: true,
-        createdAt: now.subtract(const Duration(days: 1, hours: 3)),
-      ),
-      Notification(
-        id: '5',
-        type: NotificationType.memberJoined,
-        title: 'Nouveau membre',
-        message: 'Emma a rejoint le groupe "Amis du lycée"',
-        metadata: {'groupId': '1', 'userId': '5', 'userName': 'Emma Davis'},
-        isRead: true,
-        createdAt: now.subtract(const Duration(days: 1, hours: 8)),
-      ),
+    return Notification(
+      id: doc.id,
+      type: _typeFromString(data['type'] as String),
+      title: data['title'] as String,
+      message: data['message'] as String,
+      metadata: Map<String, dynamic>.from(data['metadata'] as Map? ?? {}),
+      isRead: data['isRead'] as bool? ?? false,
+      createdAt: data['createdAt'] != null
+          ? (data['createdAt'] as Timestamp).toDate()
+          : DateTime.now(),
+    );
+  }
 
-      // Cette semaine
-      Notification(
-        id: '6',
-        type: NotificationType.invitation,
-        title: 'Invitation à un groupe',
-        message: 'Alice vous a invité à rejoindre "Voyage Portugal 2024"',
-        metadata: {'groupId': '3', 'userId': '2', 'userName': 'Alice Martin'},
-        createdAt: now.subtract(const Duration(days: 3)),
-      ),
-      Notification(
-        id: '7',
-        type: NotificationType.eventUpdate,
-        title: 'Événement modifié',
-        message: 'L\'heure de "Soirée jeux de société" a changé',
-        metadata: {'eventId': '2', 'groupId': '1'},
-        isRead: true,
-        createdAt: now.subtract(const Duration(days: 4)),
-      ),
-      Notification(
-        id: '8',
-        type: NotificationType.pollClosed,
-        title: 'Résultat du sondage',
-        message: 'Le sondage "Restaurant pour l\'anniversaire" est terminé',
-        metadata: {'pollId': '1', 'eventId': '2'},
-        isRead: true,
-        createdAt: now.subtract(const Duration(days: 5)),
-      ),
-      Notification(
-        id: '9',
-        type: NotificationType.paymentReceived,
-        title: 'Remboursement reçu',
-        message: 'Bob vous a remboursé 25€',
-        metadata: {
-          'budgetId': '2',
-          'userId': '3',
-          'userName': 'Bob Wilson',
-          'amount': 25.0,
-        },
-        isRead: true,
-        createdAt: now.subtract(const Duration(days: 6)),
-      ),
+  String _typeToString(NotificationType type) {
+    return type.toString().split('.').last;
+  }
 
-      // Ce mois-ci
-      Notification(
-        id: '10',
-        type: NotificationType.memberLeft,
-        title: 'Membre parti',
-        message: 'Frank a quitté le groupe "Collègues"',
-        metadata: {'groupId': '2', 'userId': '6', 'userName': 'Frank Miller'},
-        isRead: true,
-        createdAt: now.subtract(const Duration(days: 15)),
-      ),
-      Notification(
-        id: '11',
-        type: NotificationType.eventUpdate,
-        title: 'Nouvel événement',
-        message: 'Alice a créé l\'événement "Pique-nique au parc"',
-        metadata: {
-          'eventId': '3',
-          'groupId': '1',
-          'userId': '2',
-          'userName': 'Alice Martin',
-        },
-        isRead: true,
-        createdAt: now.subtract(const Duration(days: 20)),
-      ),
-    ];
+  NotificationType _typeFromString(String typeStr) {
+    switch (typeStr) {
+      case 'invitation':
+        return NotificationType.invitation;
+      case 'eventReminder':
+        return NotificationType.eventReminder;
+      case 'eventUpdate':
+        return NotificationType.eventUpdate;
+      case 'pollCreated':
+        return NotificationType.pollCreated;
+      case 'pollClosed':
+        return NotificationType.pollClosed;
+      case 'expenseAdded':
+        return NotificationType.expenseAdded;
+      case 'paymentRequest':
+        return NotificationType.paymentRequest;
+      case 'paymentReceived':
+        return NotificationType.paymentReceived;
+      case 'memberJoined':
+        return NotificationType.memberJoined;
+      case 'memberLeft':
+        return NotificationType.memberLeft;
+      default:
+        return NotificationType.invitation;
+    }
   }
 }

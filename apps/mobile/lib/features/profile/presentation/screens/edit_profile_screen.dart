@@ -42,26 +42,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     try {
       final authProvider = context.read<AuthProvider>();
-      final currentUser = authProvider.currentUser!;
 
-      // Créer l'utilisateur mis à jour
-      final updatedUser = User(
-        id: currentUser.id,
-        email: _emailController.text.trim(),
-        name: _nameController.text.trim(),
-        photoUrl: currentUser.photoUrl,
-        phoneNumber: currentUser.phoneNumber,
-        createdAt: currentUser.createdAt,
-        lastLoginAt: currentUser.lastLoginAt,
-        isEmailVerified: currentUser.isEmailVerified,
-        role: currentUser.role,
-      );
-
-      // Simuler la mise à jour (en attendant Firebase)
-      await Future.delayed(const Duration(seconds: 1));
-
-      // TODO: Mettre à jour dans Firebase
-      // await authProvider.updateProfile(updatedUser);
+      // Mettre à jour le profil via Firebase
+      await authProvider.updateProfile(name: _nameController.text.trim());
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

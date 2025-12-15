@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/constants/app_constants.dart';
+import '../../../../features/auth/presentation/providers/auth_provider.dart';
 import '../../domain/entities/notification.dart' as domain;
 import '../providers/notification_provider.dart';
 
@@ -17,9 +17,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(
-      () => context.read<NotificationProvider>().fetchNotifications(),
-    );
+    Future.microtask(() {
+      final authProvider = context.read<AuthProvider>();
+      final userId = authProvider.currentUser?.id ?? '';
+      if (userId.isNotEmpty) {
+        context.read<NotificationProvider>().fetchNotifications(userId);
+      }
+    });
   }
 
   @override
@@ -34,7 +38,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               if (provider.unreadCount == 0) return const SizedBox.shrink();
 
               return TextButton.icon(
-                onPressed: () => provider.markAllAsRead(),
+                onPressed: () {
+                  final authProvider = context.read<AuthProvider>();
+                  final userId = authProvider.currentUser?.id ?? '';
+                  if (userId.isNotEmpty) {
+                    provider.markAllAsRead(userId);
+                  }
+                },
                 icon: const Icon(Icons.done_all, size: 18),
                 label: const Text('Tout marquer comme lu'),
               );
@@ -102,7 +112,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           final groupedNotifications = provider.getNotificationsGroupedByDate();
 
           return RefreshIndicator(
-            onRefresh: provider.fetchNotifications,
+            onRefresh: () {
+              final authProvider = context.read<AuthProvider>();
+              final userId = authProvider.currentUser?.id ?? '';
+              return provider.fetchNotifications(userId);
+            },
             child: ListView.builder(
               padding: const EdgeInsets.symmetric(vertical: 8),
               itemCount: groupedNotifications.length,

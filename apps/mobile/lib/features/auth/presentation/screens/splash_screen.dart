@@ -54,19 +54,7 @@ class _SplashScreenState extends State<SplashScreen>
 
     // TODO: Vérifier si l'utilisateur est connecté via AuthProvider
     // Pour l'instant, on redirige toujours vers onboarding
-    final bool isAuthenticated = false;
-    final bool hasSeenOnboarding = false; // TODO: Vérifier SharedPreferences
-
-    if (isAuthenticated) {
-      // Utilisateur connecté → accueil
-      Navigator.of(context).pushReplacementNamed(AppRoutes.home);
-    } else if (hasSeenOnboarding) {
-      // Pas connecté mais onboarding vu → login
-      Navigator.of(context).pushReplacementNamed(AppRoutes.login);
-    } else {
-      // Premier lancement → onboarding
-      Navigator.of(context).pushReplacementNamed(AppRoutes.onboarding);
-    }
+    Navigator.of(context).pushReplacementNamed(AppRoutes.onboarding);
   }
 
   @override

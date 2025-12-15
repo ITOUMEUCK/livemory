@@ -1,8 +1,12 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import '../../domain/entities/budget.dart';
+import 'package:mobile/core/services/firestore_service.dart';
+import 'package:mobile/features/budgets/domain/entities/budget.dart';
 
 /// Provider pour la gestion des budgets
 class BudgetProvider with ChangeNotifier {
+  final FirestoreService _firestoreService = FirestoreService();
+
   List<Budget> _budgets = [];
   bool _isLoading = false;
   String? _errorMessage;
@@ -18,17 +22,17 @@ class BudgetProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      await Future.delayed(const Duration(seconds: 1));
-
-      // Mock data
-      _budgets = _generateMockBudgets();
-
+      final querySnapshot = await _firestoreService.readAll('budgets');
+      _budgets = querySnapshot.docs
+          .map((doc) => _budgetFromFirestore(doc))
+          .toList();
       _isLoading = false;
       notifyListeners();
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = 'Erreur lors de la récupération des budgets: $e';
       _isLoading = false;
       notifyListeners();
+      debugPrint(_errorMessage);
     }
   }
 
@@ -42,28 +46,32 @@ class BudgetProvider with ChangeNotifier {
     required List<String> participantIds,
   }) async {
     try {
-      await Future.delayed(const Duration(milliseconds: 500));
+      final budgetData = {
+        'eventId': eventId,
+        'name': name,
+        'description': description,
+        'totalAmount': totalAmount,
+        'splitType': _splitTypeToString(splitType),
+        'participantIds': participantIds,
+        'expenses': [], // Array vide au départ
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
 
-      final budget = Budget(
-        id: 'budget_${_budgets.length + 1}',
-        eventId: eventId,
-        name: name,
-        description: description,
-        totalAmount: totalAmount,
-        splitType: splitType,
-        participantIds: participantIds,
-        expenses: [],
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
+      final budgetId = await _firestoreService.create('budgets', budgetData);
 
-      _budgets.add(budget);
+      // Récupérer le document créé
+      final docSnapshot = await _firestoreService.read('budgets', budgetId);
+      final newBudget = _budgetFromFirestore(docSnapshot);
+
+      _budgets.add(newBudget);
       notifyListeners();
 
-      return budget;
+      return newBudget;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = 'Erreur lors de la création du budget: $e';
       notifyListeners();
+      debugPrint(_errorMessage);
       return null;
     }
   }
@@ -81,8 +89,12 @@ class BudgetProvider with ChangeNotifier {
     String? receiptUrl,
   }) async {
     try {
-      await Future.delayed(const Duration(milliseconds: 500));
+      final budgetIndex = _budgets.indexWhere((b) => b.id == budgetId);
+      if (budgetIndex == -1) return null;
 
+      final budget = _budgets[budgetIndex];
+
+      // Créer la nouvelle dépense
       final expense = Expense(
         id: 'expense_${DateTime.now().millisecondsSinceEpoch}',
         budgetId: budgetId,
@@ -97,22 +109,26 @@ class BudgetProvider with ChangeNotifier {
         createdAt: DateTime.now(),
       );
 
-      final budgetIndex = _budgets.indexWhere((b) => b.id == budgetId);
-      if (budgetIndex != -1) {
-        final budget = _budgets[budgetIndex];
-        final updatedExpenses = List<Expense>.from(budget.expenses)
-          ..add(expense);
-        _budgets[budgetIndex] = budget.copyWith(
-          expenses: updatedExpenses,
-          updatedAt: DateTime.now(),
-        );
-        notifyListeners();
-      }
+      final updatedExpenses = List<Expense>.from(budget.expenses)..add(expense);
 
+      // Mettre à jour dans Firestore
+      await _firestoreService.update('budgets', budgetId, {
+        'expenses': updatedExpenses.map((e) => _expenseToMap(e)).toList(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // Mettre à jour localement
+      _budgets[budgetIndex] = budget.copyWith(
+        expenses: updatedExpenses,
+        updatedAt: DateTime.now(),
+      );
+
+      notifyListeners();
       return expense;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = 'Erreur lors de l\'ajout de la dépense: $e';
       notifyListeners();
+      debugPrint(_errorMessage);
       return null;
     }
   }
@@ -124,38 +140,42 @@ class BudgetProvider with ChangeNotifier {
     required String userId,
   }) async {
     try {
-      await Future.delayed(const Duration(milliseconds: 300));
-
       final budgetIndex = _budgets.indexWhere((b) => b.id == budgetId);
-      if (budgetIndex != -1) {
-        final budget = _budgets[budgetIndex];
-        final expenseIndex = budget.expenses.indexWhere(
-          (e) => e.id == expenseId,
-        );
+      if (budgetIndex == -1) return;
 
-        if (expenseIndex != -1) {
-          final expense = budget.expenses[expenseIndex];
-          final updatedShares = expense.shares.map((share) {
-            if (share.userId == userId) {
-              return share.copyWith(isPaid: true);
-            }
-            return share;
-          }).toList();
+      final budget = _budgets[budgetIndex];
+      final expenseIndex = budget.expenses.indexWhere((e) => e.id == expenseId);
+      if (expenseIndex == -1) return;
 
-          final updatedExpense = expense.copyWith(shares: updatedShares);
-          final updatedExpenses = List<Expense>.from(budget.expenses);
-          updatedExpenses[expenseIndex] = updatedExpense;
-
-          _budgets[budgetIndex] = budget.copyWith(
-            expenses: updatedExpenses,
-            updatedAt: DateTime.now(),
-          );
-          notifyListeners();
+      final expense = budget.expenses[expenseIndex];
+      final updatedShares = expense.shares.map((share) {
+        if (share.userId == userId) {
+          return share.copyWith(isPaid: true);
         }
-      }
-    } catch (e) {
-      _errorMessage = e.toString();
+        return share;
+      }).toList();
+
+      final updatedExpense = expense.copyWith(shares: updatedShares);
+      final updatedExpenses = List<Expense>.from(budget.expenses);
+      updatedExpenses[expenseIndex] = updatedExpense;
+
+      // Mettre à jour dans Firestore
+      await _firestoreService.update('budgets', budgetId, {
+        'expenses': updatedExpenses.map((e) => _expenseToMap(e)).toList(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // Mettre à jour localement
+      _budgets[budgetIndex] = budget.copyWith(
+        expenses: updatedExpenses,
+        updatedAt: DateTime.now(),
+      );
+
       notifyListeners();
+    } catch (e) {
+      _errorMessage = 'Erreur lors de la mise à jour du paiement: $e';
+      notifyListeners();
+      debugPrint(_errorMessage);
     }
   }
 
@@ -165,37 +185,44 @@ class BudgetProvider with ChangeNotifier {
     required String expenseId,
   }) async {
     try {
-      await Future.delayed(const Duration(milliseconds: 300));
-
       final budgetIndex = _budgets.indexWhere((b) => b.id == budgetId);
-      if (budgetIndex != -1) {
-        final budget = _budgets[budgetIndex];
-        final updatedExpenses = budget.expenses
-            .where((e) => e.id != expenseId)
-            .toList();
+      if (budgetIndex == -1) return;
 
-        _budgets[budgetIndex] = budget.copyWith(
-          expenses: updatedExpenses,
-          updatedAt: DateTime.now(),
-        );
-        notifyListeners();
-      }
-    } catch (e) {
-      _errorMessage = e.toString();
+      final budget = _budgets[budgetIndex];
+      final updatedExpenses = budget.expenses
+          .where((e) => e.id != expenseId)
+          .toList();
+
+      // Mettre à jour dans Firestore
+      await _firestoreService.update('budgets', budgetId, {
+        'expenses': updatedExpenses.map((e) => _expenseToMap(e)).toList(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // Mettre à jour localement
+      _budgets[budgetIndex] = budget.copyWith(
+        expenses: updatedExpenses,
+        updatedAt: DateTime.now(),
+      );
+
       notifyListeners();
+    } catch (e) {
+      _errorMessage = 'Erreur lors de la suppression de la dépense: $e';
+      notifyListeners();
+      debugPrint(_errorMessage);
     }
   }
 
   /// Supprimer un budget
   Future<void> deleteBudget(String budgetId) async {
     try {
-      await Future.delayed(const Duration(milliseconds: 300));
-
+      await _firestoreService.delete('budgets', budgetId);
       _budgets.removeWhere((b) => b.id == budgetId);
       notifyListeners();
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = 'Erreur lors de la suppression du budget: $e';
       notifyListeners();
+      debugPrint(_errorMessage);
     }
   }
 
@@ -229,137 +256,123 @@ class BudgetProvider with ChangeNotifier {
     };
   }
 
-  /// Générer des données de test
-  List<Budget> _generateMockBudgets() {
-    final now = DateTime.now();
+  // Méthodes de conversion Firestore
 
-    // Budget 1: Week-end ski (avec dépenses)
-    final budget1 = Budget(
-      id: 'budget_1',
-      eventId: 'event_1',
-      name: 'Budget Week-end Ski',
-      description: 'Budget pour le week-end du 20-21 décembre',
-      totalAmount: 2500.0,
-      splitType: SplitType.equal,
-      participantIds: ['user_1', 'user_2', 'user_3', 'user_4'],
-      expenses: [
-        Expense(
-          id: 'exp_1',
-          budgetId: 'budget_1',
-          title: 'Location chalet',
-          description: 'Chalet 4 personnes pour 2 nuits',
-          amount: 800.0,
-          category: ExpenseCategory.accommodation,
-          paidBy: 'user_1',
-          shares: [
-            const ExpenseShare(userId: 'user_1', amount: 200.0, isPaid: true),
-            const ExpenseShare(userId: 'user_2', amount: 200.0, isPaid: true),
-            const ExpenseShare(userId: 'user_3', amount: 200.0, isPaid: false),
-            const ExpenseShare(userId: 'user_4', amount: 200.0, isPaid: false),
-          ],
-          date: now.subtract(const Duration(days: 2)),
-          createdAt: now.subtract(const Duration(days: 2)),
-        ),
-        Expense(
-          id: 'exp_2',
-          budgetId: 'budget_1',
-          title: 'Forfaits ski',
-          description: '4 forfaits journée',
-          amount: 240.0,
-          category: ExpenseCategory.activities,
-          paidBy: 'user_2',
-          shares: [
-            const ExpenseShare(userId: 'user_1', amount: 60.0, isPaid: true),
-            const ExpenseShare(userId: 'user_2', amount: 60.0, isPaid: true),
-            const ExpenseShare(userId: 'user_3', amount: 60.0, isPaid: true),
-            const ExpenseShare(userId: 'user_4', amount: 60.0, isPaid: false),
-          ],
-          date: now.subtract(const Duration(days: 1)),
-          createdAt: now.subtract(const Duration(days: 1)),
-        ),
-        Expense(
-          id: 'exp_3',
-          budgetId: 'budget_1',
-          title: 'Courses alimentaires',
-          description: 'Supermarché pour le week-end',
-          amount: 150.0,
-          category: ExpenseCategory.food,
-          paidBy: 'user_3',
-          shares: [
-            const ExpenseShare(userId: 'user_1', amount: 37.5, isPaid: false),
-            const ExpenseShare(userId: 'user_2', amount: 37.5, isPaid: false),
-            const ExpenseShare(userId: 'user_3', amount: 37.5, isPaid: true),
-            const ExpenseShare(userId: 'user_4', amount: 37.5, isPaid: false),
-          ],
-          date: now,
-          createdAt: now,
-        ),
-      ],
-      createdAt: now.subtract(const Duration(days: 5)),
-      updatedAt: now,
+  Budget _budgetFromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+
+    final expensesData = data['expenses'] as List<dynamic>? ?? [];
+    final expenses = expensesData
+        .map((expData) => _expenseFromMap(expData as Map<String, dynamic>))
+        .toList();
+
+    return Budget(
+      id: doc.id,
+      eventId: data['eventId'] as String,
+      name: data['name'] as String,
+      description: data['description'] as String?,
+      totalAmount: (data['totalAmount'] as num).toDouble(),
+      splitType: _splitTypeFromString(data['splitType'] as String),
+      participantIds: List<String>.from(data['participantIds'] as List? ?? []),
+      expenses: expenses,
+      createdAt: data['createdAt'] != null
+          ? (data['createdAt'] as Timestamp).toDate()
+          : DateTime.now(),
+      updatedAt: data['updatedAt'] != null
+          ? (data['updatedAt'] as Timestamp).toDate()
+          : DateTime.now(),
     );
+  }
 
-    // Budget 2: Soirée jeux (peu de dépenses)
-    final budget2 = Budget(
-      id: 'budget_2',
-      eventId: 'event_2',
-      name: 'Budget Soirée Jeux',
-      description: 'Pizza et boissons',
-      totalAmount: 150.0,
-      splitType: SplitType.equal,
-      participantIds: ['user_1', 'user_2', 'user_3'],
-      expenses: [
-        Expense(
-          id: 'exp_4',
-          budgetId: 'budget_2',
-          title: 'Pizzas',
-          description: '3 pizzas familiales',
-          amount: 45.0,
-          category: ExpenseCategory.food,
-          paidBy: 'user_1',
-          shares: [
-            const ExpenseShare(userId: 'user_1', amount: 15.0, isPaid: true),
-            const ExpenseShare(userId: 'user_2', amount: 15.0, isPaid: true),
-            const ExpenseShare(userId: 'user_3', amount: 15.0, isPaid: true),
-          ],
-          date: now.subtract(const Duration(hours: 3)),
-          createdAt: now.subtract(const Duration(hours: 3)),
-        ),
-        Expense(
-          id: 'exp_5',
-          budgetId: 'budget_2',
-          title: 'Boissons',
-          description: 'Sodas et bières',
-          amount: 25.0,
-          category: ExpenseCategory.food,
-          paidBy: 'user_2',
-          shares: [
-            const ExpenseShare(userId: 'user_1', amount: 8.33, isPaid: true),
-            const ExpenseShare(userId: 'user_2', amount: 8.33, isPaid: true),
-            const ExpenseShare(userId: 'user_3', amount: 8.34, isPaid: false),
-          ],
-          date: now.subtract(const Duration(hours: 2)),
-          createdAt: now.subtract(const Duration(hours: 2)),
-        ),
-      ],
-      createdAt: now.subtract(const Duration(days: 1)),
-      updatedAt: now.subtract(const Duration(hours: 2)),
+  Map<String, dynamic> _expenseToMap(Expense expense) {
+    return {
+      'id': expense.id,
+      'budgetId': expense.budgetId,
+      'title': expense.title,
+      'description': expense.description,
+      'amount': expense.amount,
+      'category': _categoryToString(expense.category),
+      'paidBy': expense.paidBy,
+      'shares': expense.shares.map((s) => _shareToMap(s)).toList(),
+      'date': Timestamp.fromDate(expense.date),
+      'receiptUrl': expense.receiptUrl,
+      'createdAt': Timestamp.fromDate(expense.createdAt),
+    };
+  }
+
+  Expense _expenseFromMap(Map<String, dynamic> map) {
+    final sharesData = map['shares'] as List<dynamic>? ?? [];
+    final shares = sharesData
+        .map((shareData) => _shareFromMap(shareData as Map<String, dynamic>))
+        .toList();
+
+    return Expense(
+      id: map['id'] as String,
+      budgetId: map['budgetId'] as String,
+      title: map['title'] as String,
+      description: map['description'] as String?,
+      amount: (map['amount'] as num).toDouble(),
+      category: _categoryFromString(map['category'] as String),
+      paidBy: map['paidBy'] as String,
+      shares: shares,
+      date: (map['date'] as Timestamp).toDate(),
+      receiptUrl: map['receiptUrl'] as String?,
+      createdAt: (map['createdAt'] as Timestamp).toDate(),
     );
+  }
 
-    // Budget 3: Voyage été (budget vide pour l'instant)
-    final budget3 = Budget(
-      id: 'budget_3',
-      eventId: 'event_3',
-      name: 'Budget Voyage Été',
-      description: 'Voyage en Italie - 7 jours',
-      totalAmount: 5000.0,
-      splitType: SplitType.percentage,
-      participantIds: ['user_1', 'user_2', 'user_3', 'user_4', 'user_5'],
-      expenses: [],
-      createdAt: now.subtract(const Duration(days: 30)),
-      updatedAt: now.subtract(const Duration(days: 30)),
+  Map<String, dynamic> _shareToMap(ExpenseShare share) {
+    return {
+      'userId': share.userId,
+      'amount': share.amount,
+      'isPaid': share.isPaid,
+    };
+  }
+
+  ExpenseShare _shareFromMap(Map<String, dynamic> map) {
+    return ExpenseShare(
+      userId: map['userId'] as String,
+      amount: (map['amount'] as num).toDouble(),
+      isPaid: map['isPaid'] as bool? ?? false,
     );
+  }
 
-    return [budget1, budget2, budget3];
+  String _splitTypeToString(SplitType type) {
+    return type.toString().split('.').last;
+  }
+
+  SplitType _splitTypeFromString(String typeStr) {
+    switch (typeStr) {
+      case 'equal':
+        return SplitType.equal;
+      case 'percentage':
+        return SplitType.percentage;
+      case 'custom':
+        return SplitType.custom;
+      default:
+        return SplitType.equal;
+    }
+  }
+
+  String _categoryToString(ExpenseCategory category) {
+    return category.toString().split('.').last;
+  }
+
+  ExpenseCategory _categoryFromString(String categoryStr) {
+    switch (categoryStr) {
+      case 'food':
+        return ExpenseCategory.food;
+      case 'transport':
+        return ExpenseCategory.transport;
+      case 'accommodation':
+        return ExpenseCategory.accommodation;
+      case 'activities':
+        return ExpenseCategory.activities;
+      case 'shopping':
+        return ExpenseCategory.shopping;
+      case 'other':
+      default:
+        return ExpenseCategory.other;
+    }
   }
 }

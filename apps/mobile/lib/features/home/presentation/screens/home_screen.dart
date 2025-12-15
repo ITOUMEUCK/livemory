@@ -32,7 +32,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
-    final user = authProvider.currentUser;
 
     return Scaffold(
       body: IndexedStack(index: _currentIndex, children: _screens),
@@ -109,9 +108,13 @@ class _DashboardTabState extends State<_DashboardTab> {
   void initState() {
     super.initState();
     // Charger les notifications au démarrage
-    Future.microtask(
-      () => context.read<NotificationProvider>().fetchNotifications(),
-    );
+    Future.microtask(() {
+      final authProvider = context.read<AuthProvider>();
+      final userId = authProvider.currentUser?.id ?? '';
+      if (userId.isNotEmpty) {
+        context.read<NotificationProvider>().fetchNotifications(userId);
+      }
+    });
   }
 
   @override
