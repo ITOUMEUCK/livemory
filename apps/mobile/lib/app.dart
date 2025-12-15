@@ -8,6 +8,7 @@ import 'features/groups/presentation/providers/group_provider.dart';
 import 'features/events/presentation/providers/event_provider.dart';
 import 'features/polls/presentation/providers/poll_provider.dart';
 import 'features/budgets/presentation/providers/budget_provider.dart';
+import 'features/notifications/presentation/providers/notification_provider.dart';
 
 class LivemoryApp extends StatelessWidget {
   const LivemoryApp({super.key});
@@ -21,6 +22,7 @@ class LivemoryApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => EventProvider()),
         ChangeNotifierProvider(create: (_) => PollProvider()),
         ChangeNotifierProvider(create: (_) => BudgetProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
       ],
       child: MaterialApp(
         title: 'Livemory',

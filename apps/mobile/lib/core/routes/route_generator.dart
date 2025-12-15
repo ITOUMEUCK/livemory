@@ -17,6 +17,7 @@ import '../../features/polls/presentation/screens/poll_detail_screen.dart';
 import '../../features/budgets/presentation/screens/budgets_list_screen.dart';
 import '../../features/budgets/presentation/screens/create_budget_screen.dart';
 import '../../features/budgets/presentation/screens/budget_detail_screen.dart';
+import '../../features/notifications/presentation/screens/notifications_screen.dart';
 
 /// Générateur de routes pour l'application
 class RouteGenerator {
@@ -69,6 +70,9 @@ class RouteGenerator {
       case AppRoutes.budget:
         final eventId = settings.arguments as String?;
         return _buildRoute(BudgetsListScreen(eventId: eventId));
+
+      case AppRoutes.notifications:
+        return _buildRoute(const NotificationsScreen());
 
       case AppRoutes.createBudget:
         final eventId = settings.arguments as String?;

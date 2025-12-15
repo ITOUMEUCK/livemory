@@ -8,6 +8,7 @@ import '../../../groups/presentation/screens/groups_list_screen.dart';
 import '../../../events/presentation/screens/events_list_screen.dart';
 import '../../../polls/presentation/providers/poll_provider.dart';
 import '../../../polls/domain/entities/poll.dart';
+import '../../../notifications/presentation/providers/notification_provider.dart';
 
 /// Écran d'accueil principal avec bottom navigation
 class HomeScreen extends StatefulWidget {
@@ -95,8 +96,22 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 /// Tab Dashboard (Accueil)
-class _DashboardTab extends StatelessWidget {
+class _DashboardTab extends StatefulWidget {
   const _DashboardTab();
+
+  @override
+  State<_DashboardTab> createState() => _DashboardTabState();
+}
+
+class _DashboardTabState extends State<_DashboardTab> {
+  @override
+  void initState() {
+    super.initState();
+    // Charger les notifications au démarrage
+    Future.microtask(
+      () => context.read<NotificationProvider>().fetchNotifications(),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -126,10 +141,46 @@ class _DashboardTab extends StatelessWidget {
             ],
           ),
           actions: [
-            IconButton(
-              icon: const Icon(Icons.notifications_outlined),
-              onPressed: () {
-                Navigator.of(context).pushNamed(AppRoutes.notifications);
+            // Badge de notification
+            Consumer<NotificationProvider>(
+              builder: (context, notificationProvider, _) {
+                final unreadCount = notificationProvider.unreadCount;
+
+                return Stack(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.notifications_outlined),
+                      onPressed: () {
+                        Navigator.of(context).pushNamed(AppRoutes.notifications);
+                      },
+                    ),
+                    if (unreadCount > 0)
+                      Positioned(
+                        right: 8,
+                        top: 8,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 18,
+                            minHeight: 18,
+                          ),
+                          child: Text(
+                            unreadCount > 9 ? '9+' : '$unreadCount',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                  ],
+                );
               },
             ),
           ],
