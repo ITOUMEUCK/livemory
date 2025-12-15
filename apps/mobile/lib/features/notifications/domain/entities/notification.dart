@@ -163,14 +163,14 @@ class Notification extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        type,
-        title,
-        message,
-        metadata,
-        isRead,
-        createdAt,
-      ];
+    id,
+    type,
+    title,
+    message,
+    metadata,
+    isRead,
+    createdAt,
+  ];
 
   @override
   String toString() =>

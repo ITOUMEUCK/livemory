@@ -10,8 +10,7 @@ class NotificationProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
 
   /// Nombre de notifications non lues
-  int get unreadCount =>
-      _notifications.where((notif) => !notif.isRead).length;
+  int get unreadCount => _notifications.where((notif) => !notif.isRead).length;
 
   /// Notifications non lues
   List<Notification> get unreadNotifications =>
@@ -68,8 +67,9 @@ class NotificationProvider with ChangeNotifier {
     try {
       await Future.delayed(const Duration(milliseconds: 300));
 
-      final index =
-          _notifications.indexWhere((notif) => notif.id == notificationId);
+      final index = _notifications.indexWhere(
+        (notif) => notif.id == notificationId,
+      );
       if (index != -1) {
         _notifications[index] = _notifications[index].markAsRead();
         notifyListeners();
@@ -84,8 +84,9 @@ class NotificationProvider with ChangeNotifier {
     try {
       await Future.delayed(const Duration(milliseconds: 300));
 
-      final index =
-          _notifications.indexWhere((notif) => notif.id == notificationId);
+      final index = _notifications.indexWhere(
+        (notif) => notif.id == notificationId,
+      );
       if (index != -1) {
         _notifications[index] = _notifications[index].markAsUnread();
         notifyListeners();
@@ -213,10 +214,7 @@ class NotificationProvider with ChangeNotifier {
         type: NotificationType.eventReminder,
         title: 'Rappel d\'événement',
         message: 'Week-end Ski commence demain à 14h00',
-        metadata: {
-          'eventId': '1',
-          'groupId': '1',
-        },
+        metadata: {'eventId': '1', 'groupId': '1'},
         createdAt: now.subtract(const Duration(hours: 5)),
       ),
 
@@ -241,11 +239,7 @@ class NotificationProvider with ChangeNotifier {
         type: NotificationType.memberJoined,
         title: 'Nouveau membre',
         message: 'Emma a rejoint le groupe "Amis du lycée"',
-        metadata: {
-          'groupId': '1',
-          'userId': '5',
-          'userName': 'Emma Davis',
-        },
+        metadata: {'groupId': '1', 'userId': '5', 'userName': 'Emma Davis'},
         isRead: true,
         createdAt: now.subtract(const Duration(days: 1, hours: 8)),
       ),
@@ -256,11 +250,7 @@ class NotificationProvider with ChangeNotifier {
         type: NotificationType.invitation,
         title: 'Invitation à un groupe',
         message: 'Alice vous a invité à rejoindre "Voyage Portugal 2024"',
-        metadata: {
-          'groupId': '3',
-          'userId': '2',
-          'userName': 'Alice Martin',
-        },
+        metadata: {'groupId': '3', 'userId': '2', 'userName': 'Alice Martin'},
         createdAt: now.subtract(const Duration(days: 3)),
       ),
       Notification(
@@ -268,10 +258,7 @@ class NotificationProvider with ChangeNotifier {
         type: NotificationType.eventUpdate,
         title: 'Événement modifié',
         message: 'L\'heure de "Soirée jeux de société" a changé',
-        metadata: {
-          'eventId': '2',
-          'groupId': '1',
-        },
+        metadata: {'eventId': '2', 'groupId': '1'},
         isRead: true,
         createdAt: now.subtract(const Duration(days: 4)),
       ),
@@ -280,10 +267,7 @@ class NotificationProvider with ChangeNotifier {
         type: NotificationType.pollClosed,
         title: 'Résultat du sondage',
         message: 'Le sondage "Restaurant pour l\'anniversaire" est terminé',
-        metadata: {
-          'pollId': '1',
-          'eventId': '2',
-        },
+        metadata: {'pollId': '1', 'eventId': '2'},
         isRead: true,
         createdAt: now.subtract(const Duration(days: 5)),
       ),
@@ -308,11 +292,7 @@ class NotificationProvider with ChangeNotifier {
         type: NotificationType.memberLeft,
         title: 'Membre parti',
         message: 'Frank a quitté le groupe "Collègues"',
-        metadata: {
-          'groupId': '2',
-          'userId': '6',
-          'userName': 'Frank Miller',
-        },
+        metadata: {'groupId': '2', 'userId': '6', 'userName': 'Frank Miller'},
         isRead: true,
         createdAt: now.subtract(const Duration(days: 15)),
       ),

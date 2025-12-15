@@ -83,16 +83,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   const SizedBox(height: 16),
                   Text(
                     'Aucune notification',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: Colors.grey[600],
-                        ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.titleLarge?.copyWith(color: Colors.grey[600]),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Vous serez notifié des activités importantes',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[500],
-                        ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(color: Colors.grey[500]),
                   ),
                 ],
               ),
@@ -119,9 +119,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       child: Text(
                         dateKey,
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              color: AppColors.textSecondary,
-                              fontWeight: FontWeight.w600,
-                            ),
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                     // Liste des notifications
@@ -133,10 +133,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                             provider.markAsRead(notification.id),
                         onMarkAsUnread: () =>
                             provider.markAsUnread(notification.id),
-                        onDelete: () => _showDeleteDialog(
-                          provider,
-                          notification.id,
-                        ),
+                        onDelete: () =>
+                            _showDeleteDialog(provider, notification.id),
                       );
                     }),
                   ],
@@ -167,7 +165,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Supprimer la notification'),
-        content: const Text('Voulez-vous vraiment supprimer cette notification ?'),
+        content: const Text(
+          'Voulez-vous vraiment supprimer cette notification ?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -260,9 +260,7 @@ class _NotificationCard extends StatelessWidget {
                 : color.withValues(alpha: 0.05),
             border: Border(
               left: BorderSide(
-                color: notification.isRead
-                    ? Colors.transparent
-                    : color,
+                color: notification.isRead ? Colors.transparent : color,
                 width: 4,
               ),
             ),
@@ -296,9 +294,7 @@ class _NotificationCard extends StatelessWidget {
                         Expanded(
                           child: Text(
                             notification.title,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
+                            style: Theme.of(context).textTheme.titleMedium
                                 ?.copyWith(
                                   fontWeight: notification.isRead
                                       ? FontWeight.normal
@@ -321,8 +317,8 @@ class _NotificationCard extends StatelessWidget {
                     Text(
                       notification.message,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Row(
@@ -331,10 +327,8 @@ class _NotificationCard extends StatelessWidget {
                         // Temps relatif
                         Text(
                           notification.relativeTime,
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: AppColors.textTertiary,
-                                  ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: AppColors.textTertiary),
                         ),
                         // Actions rapides
                         Row(

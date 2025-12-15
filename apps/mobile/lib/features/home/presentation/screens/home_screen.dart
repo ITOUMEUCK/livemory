@@ -151,7 +151,9 @@ class _DashboardTabState extends State<_DashboardTab> {
                     IconButton(
                       icon: const Icon(Icons.notifications_outlined),
                       onPressed: () {
-                        Navigator.of(context).pushNamed(AppRoutes.notifications);
+                        Navigator.of(
+                          context,
+                        ).pushNamed(AppRoutes.notifications);
                       },
                     ),
                     if (unreadCount > 0)
