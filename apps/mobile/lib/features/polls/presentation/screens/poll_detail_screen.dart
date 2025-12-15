@@ -493,11 +493,7 @@ class _PollDetailScreenState extends State<PollDetailScreen> {
       _isVoting = true;
     });
 
-    await pollProvider.vote(
-      poll.id,
-      userId,
-      _selectedOptions.toList(),
-    );
+    await pollProvider.vote(poll.id, userId, _selectedOptions.toList());
 
     setState(() {
       _isVoting = false;

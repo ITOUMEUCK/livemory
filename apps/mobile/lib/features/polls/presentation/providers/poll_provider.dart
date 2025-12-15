@@ -5,7 +5,7 @@ import 'package:mobile/features/polls/domain/entities/poll.dart';
 
 class PollProvider with ChangeNotifier {
   final FirestoreService _firestoreService = FirestoreService();
-  
+
   List<Poll> _polls = [];
   bool _isLoading = false;
   String? _errorMessage;
@@ -49,7 +49,7 @@ class PollProvider with ChangeNotifier {
   }) async {
     try {
       final now = DateTime.now();
-      
+
       // Générer les options avec des IDs uniques
       final options = optionTexts.asMap().entries.map((entry) {
         return PollOption(
@@ -73,14 +73,14 @@ class PollProvider with ChangeNotifier {
       };
 
       final pollId = await _firestoreService.create('polls', pollData);
-      
+
       // Récupérer le document créé pour obtenir l'ID et les timestamps
       final docSnapshot = await _firestoreService.read('polls', pollId);
       final newPoll = _pollFromFirestore(docSnapshot);
-      
+
       _polls.add(newPoll);
       notifyListeners();
-      
+
       return newPoll;
     } catch (e) {
       _errorMessage = 'Erreur lors de la création du sondage: $e';
@@ -91,7 +91,11 @@ class PollProvider with ChangeNotifier {
   }
 
   /// Vote pour une ou plusieurs options
-  Future<void> vote(String pollId, String userId, List<String> optionIds) async {
+  Future<void> vote(
+    String pollId,
+    String userId,
+    List<String> optionIds,
+  ) async {
     try {
       final pollIndex = _polls.indexWhere((p) => p.id == pollId);
       if (pollIndex == -1) return;
@@ -105,7 +109,9 @@ class PollProvider with ChangeNotifier {
           updatedOptions[i] = PollOption(
             id: updatedOptions[i].id,
             text: updatedOptions[i].text,
-            voterIds: updatedOptions[i].voterIds.where((id) => id != userId).toList(),
+            voterIds: updatedOptions[i].voterIds
+                .where((id) => id != userId)
+                .toList(),
             metadata: updatedOptions[i].metadata,
           );
         }
@@ -113,7 +119,9 @@ class PollProvider with ChangeNotifier {
 
       // Ajouter les nouveaux votes
       for (var optionId in optionIds) {
-        final optionIndex = updatedOptions.indexWhere((opt) => opt.id == optionId);
+        final optionIndex = updatedOptions.indexWhere(
+          (opt) => opt.id == optionId,
+        );
         if (optionIndex != -1) {
           final option = updatedOptions[optionIndex];
           if (!option.voterIds.contains(userId)) {
@@ -147,7 +155,7 @@ class PollProvider with ChangeNotifier {
         isAnonymous: poll.isAnonymous,
         createdAt: poll.createdAt,
       );
-      
+
       notifyListeners();
     } catch (e) {
       _errorMessage = 'Erreur lors du vote: $e';
@@ -192,7 +200,7 @@ class PollProvider with ChangeNotifier {
         isAnonymous: poll.isAnonymous,
         createdAt: poll.createdAt,
       );
-      
+
       notifyListeners();
     } catch (e) {
       _errorMessage = 'Erreur lors du retrait du vote: $e';
@@ -235,7 +243,7 @@ class PollProvider with ChangeNotifier {
 
   Poll _pollFromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
-    
+
     final optionsData = data['options'] as List<dynamic>? ?? [];
     final options = optionsData
         .map((optData) => _optionFromMap(optData as Map<String, dynamic>))
@@ -249,7 +257,7 @@ class PollProvider with ChangeNotifier {
       creatorId: data['creatorId'] as String,
       type: _typeFromString(data['type'] as String),
       options: options,
-      deadline: data['deadline'] != null 
+      deadline: data['deadline'] != null
           ? (data['deadline'] as Timestamp).toDate()
           : null,
       allowMultipleChoices: data['allowMultipleChoices'] as bool? ?? false,
