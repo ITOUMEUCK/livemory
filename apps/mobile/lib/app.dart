@@ -9,6 +9,7 @@ import 'features/events/presentation/providers/event_provider.dart';
 import 'features/polls/presentation/providers/poll_provider.dart';
 import 'features/budgets/presentation/providers/budget_provider.dart';
 import 'features/notifications/presentation/providers/notification_provider.dart';
+import 'core/theme/theme_provider.dart';
 
 class LivemoryApp extends StatelessWidget {
   const LivemoryApp({super.key});
@@ -23,13 +24,24 @@ class LivemoryApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => PollProvider()),
         ChangeNotifierProvider(create: (_) => BudgetProvider()),
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],
-      child: MaterialApp(
-        title: 'Livemory',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme,
-        initialRoute: AppRoutes.splash,
-        onGenerateRoute: RouteGenerator.generateRoute,
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, _) {
+          return MaterialApp(
+            title: 'Livemory',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: themeProvider.themeMode == AppThemeMode.light
+                ? ThemeMode.light
+                : themeProvider.themeMode == AppThemeMode.dark
+                    ? ThemeMode.dark
+                    : ThemeMode.system,
+            initialRoute: AppRoutes.splash,
+            onGenerateRoute: RouteGenerator.generateRoute,
+          );
+        },
       ),
     );
   }

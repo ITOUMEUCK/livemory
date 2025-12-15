@@ -18,6 +18,9 @@ import '../../features/budgets/presentation/screens/budgets_list_screen.dart';
 import '../../features/budgets/presentation/screens/create_budget_screen.dart';
 import '../../features/budgets/presentation/screens/budget_detail_screen.dart';
 import '../../features/notifications/presentation/screens/notifications_screen.dart';
+import '../../features/profile/presentation/screens/profile_screen.dart';
+import '../../features/profile/presentation/screens/edit_profile_screen.dart';
+import '../../features/settings/presentation/screens/settings_screen.dart';
 
 /// Générateur de routes pour l'application
 class RouteGenerator {
@@ -73,6 +76,15 @@ class RouteGenerator {
 
       case AppRoutes.notifications:
         return _buildRoute(const NotificationsScreen());
+
+      case '/profile':
+        return _buildRoute(const ProfileScreen());
+
+      case '/edit-profile':
+        return _buildRoute(const EditProfileScreen());
+
+      case AppRoutes.settings:
+        return _buildRoute(const SettingsScreen());
 
       case AppRoutes.createBudget:
         final eventId = settings.arguments as String?;

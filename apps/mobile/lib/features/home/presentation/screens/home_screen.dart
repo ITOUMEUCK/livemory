@@ -9,6 +9,7 @@ import '../../../events/presentation/screens/events_list_screen.dart';
 import '../../../polls/presentation/providers/poll_provider.dart';
 import '../../../polls/domain/entities/poll.dart';
 import '../../../notifications/presentation/providers/notification_provider.dart';
+import '../../../profile/presentation/screens/profile_screen.dart';
 
 /// Écran d'accueil principal avec bottom navigation
 class HomeScreen extends StatefulWidget {
@@ -25,7 +26,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _DashboardTab(),
     _GroupsTab(),
     _EventsTab(),
-    _ProfileTab(),
+    ProfileScreen(),
   ];
 
   @override
@@ -414,114 +415,6 @@ class _EventsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const EventsListScreen();
-  }
-}
-
-/// Tab Profil
-class _ProfileTab extends StatelessWidget {
-  const _ProfileTab();
-
-  @override
-  Widget build(BuildContext context) {
-    final authProvider = context.watch<AuthProvider>();
-    final user = authProvider.currentUser;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profil'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            onPressed: () {
-              Navigator.of(context).pushNamed(AppRoutes.settings);
-            },
-          ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // Avatar et infos
-          Center(
-            child: Column(
-              children: [
-                CircleAvatar(
-                  radius: 50,
-                  backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                  child: user?.photoUrl != null
-                      ? ClipOval(child: Image.network(user!.photoUrl!))
-                      : Text(
-                          user?.initials ?? 'U',
-                          style: AppTextStyles.displayMedium.copyWith(
-                            color: AppColors.primary,
-                          ),
-                        ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  user?.name ?? 'Utilisateur',
-                  style: AppTextStyles.headlineMedium,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  user?.email ?? '',
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 32),
-
-          // Stats
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _StatCard(label: 'Événements', value: '12'),
-              _StatCard(label: 'Groupes', value: '3'),
-              _StatCard(label: 'Amis', value: '45'),
-            ],
-          ),
-          const SizedBox(height: 32),
-
-          // Menu
-          _ProfileMenuItem(
-            icon: Icons.person_outline,
-            title: 'Modifier le profil',
-            onTap: () {},
-          ),
-          _ProfileMenuItem(
-            icon: Icons.notifications_outlined,
-            title: 'Notifications',
-            onTap: () {},
-          ),
-          _ProfileMenuItem(icon: Icons.language, title: 'Langue', onTap: () {}),
-          _ProfileMenuItem(
-            icon: Icons.help_outline,
-            title: 'Aide & Support',
-            onTap: () {},
-          ),
-          _ProfileMenuItem(
-            icon: Icons.privacy_tip_outlined,
-            title: 'Confidentialité',
-            onTap: () {},
-          ),
-          const SizedBox(height: 24),
-          _ProfileMenuItem(
-            icon: Icons.logout,
-            title: 'Déconnexion',
-            textColor: AppColors.error,
-            onTap: () async {
-              await authProvider.signOut();
-              if (context.mounted) {
-                Navigator.of(context).pushReplacementNamed(AppRoutes.login);
-              }
-            },
-          ),
-        ],
-      ),
-    );
   }
 }
 
