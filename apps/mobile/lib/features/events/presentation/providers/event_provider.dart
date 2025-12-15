@@ -1,8 +1,12 @@
 import 'package:flutter/foundation.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../domain/entities/event.dart';
+import '../../../../core/services/firestore_service.dart';
 
 /// Provider pour gérer l'état des événements
 class EventProvider extends ChangeNotifier {
+  final FirestoreService _firestoreService = FirestoreService();
+
   List<Event> _events = [];
   bool _isLoading = false;
   String? _errorMessage;
@@ -11,106 +15,43 @@ class EventProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  /// Récupérer tous les événements
-  Future<void> fetchEvents() async {
+  /// Récupérer tous les événements (ou par groupe)
+  Future<void> fetchEvents({String? groupId}) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      await Future.delayed(const Duration(milliseconds: 800));
+      QuerySnapshot querySnapshot;
 
-      // Mock data - événements de test
-      _events = [
-        Event(
-          id: 'event_1',
-          title: 'Week-end à la montagne ⛷️',
-          description: 'Séjour au ski dans les Alpes',
-          groupId: 'group_1',
-          creatorId: 'user_1',
-          startDate: DateTime(2024, 12, 20, 9, 0),
-          endDate: DateTime(2024, 12, 21, 18, 0),
-          location: 'Chamonix, France',
-          status: EventStatus.planned,
-          participantIds: [
-            'user_1',
-            'user_2',
-            'user_3',
-            'user_4',
-            'user_5',
-            'user_6',
-            'user_7',
-            'user_8',
-          ],
-          maybeIds: ['user_9', 'user_10'],
-          declinedIds: ['user_11'],
-          createdAt: DateTime.now().subtract(const Duration(days: 15)),
-        ),
-        Event(
-          id: 'event_2',
-          title: 'Soirée jeux 🎮',
-          description: 'Mario Kart et pizza !',
-          groupId: 'group_2',
-          creatorId: 'user_1',
-          startDate: DateTime(2024, 12, 26, 20, 0),
-          endDate: DateTime(2024, 12, 26, 23, 30),
-          location: 'Chez Marc',
-          status: EventStatus.planned,
-          participantIds: ['user_1', 'user_2', 'user_3', 'user_4', 'user_5'],
-          maybeIds: [],
-          declinedIds: [],
-          createdAt: DateTime.now().subtract(const Duration(days: 8)),
-        ),
-        Event(
-          id: 'event_3',
-          title: 'Barbecue d\'été 🍖',
-          description: 'Grand BBQ au parc pour fêter l\'été',
-          groupId: 'group_1',
-          creatorId: 'user_2',
-          startDate: DateTime(2025, 1, 5, 12, 0),
-          endDate: DateTime(2025, 1, 5, 17, 0),
-          location: 'Parc de la Tête d\'Or',
-          status: EventStatus.planned,
-          participantIds: ['user_1', 'user_2', 'user_3'],
-          maybeIds: ['user_4', 'user_5', 'user_6'],
-          declinedIds: [],
-          createdAt: DateTime.now().subtract(const Duration(days: 3)),
-        ),
-        Event(
-          id: 'event_4',
-          title: 'Match de foot ⚽',
-          description: 'Finale de la Ligue des Champions',
-          groupId: 'group_3',
-          creatorId: 'user_3',
-          startDate: DateTime(2024, 12, 28, 21, 0),
-          endDate: DateTime(2024, 12, 28, 23, 0),
-          location: 'Sports Bar',
-          status: EventStatus.planned,
-          participantIds: ['user_1', 'user_2', 'user_3', 'user_4'],
-          maybeIds: ['user_5'],
-          declinedIds: ['user_6'],
-          createdAt: DateTime.now().subtract(const Duration(days: 2)),
-        ),
-        Event(
-          id: 'event_5',
-          title: 'Concert 🎵',
-          description: 'Festival de musique électro',
-          groupId: 'group_2',
-          creatorId: 'user_1',
-          startDate: DateTime(2025, 1, 15, 19, 0),
-          endDate: DateTime(2025, 1, 16, 2, 0),
-          location: 'Zénith de Paris',
-          status: EventStatus.planned,
-          participantIds: ['user_1', 'user_2'],
-          maybeIds: ['user_3', 'user_4', 'user_5', 'user_6'],
-          declinedIds: [],
-          createdAt: DateTime.now().subtract(const Duration(hours: 12)),
-        ),
-      ];
-    } catch (e) {
-      _errorMessage = 'Erreur lors du chargement des événements';
-    } finally {
+      if (groupId != null) {
+        // Récupérer les événements d'un groupe spécifique
+        querySnapshot = await _firestoreService.query(
+          'events',
+          field: 'groupId',
+          isEqualTo: groupId,
+          orderBy: 'startDate',
+          descending: false,
+        );
+      } else {
+        // Récupérer tous les événements
+        querySnapshot = await _firestoreService.query(
+          'events',
+          orderBy: 'startDate',
+          descending: false,
+        );
+      }
+
+      _events = querySnapshot.docs.map((doc) {
+        return _eventFromFirestore(doc);
+      }).toList();
+
       _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage =
+          'Erreur lors du chargement des événements: ${e.toString()}';
       notifyListeners();
     }
   }
@@ -130,10 +71,24 @@ class EventProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await Future.delayed(const Duration(milliseconds: 500));
+      final eventData = {
+        'title': title,
+        'description': description,
+        'groupId': groupId,
+        'creatorId': creatorId,
+        'startDate': startDate != null ? Timestamp.fromDate(startDate) : null,
+        'endDate': endDate != null ? Timestamp.fromDate(endDate) : null,
+        'location': location,
+        'status': EventStatus.planned.toString().split('.').last,
+        'participantIds': [creatorId],
+        'maybeIds': <String>[],
+        'declinedIds': <String>[],
+      };
+
+      final eventId = await _firestoreService.create('events', eventData);
 
       final newEvent = Event(
-        id: 'event_${DateTime.now().millisecondsSinceEpoch}',
+        id: eventId,
         title: title,
         description: description,
         groupId: groupId,
@@ -147,15 +102,15 @@ class EventProvider extends ChangeNotifier {
       );
 
       _events.insert(0, newEvent);
+      _isLoading = false;
       notifyListeners();
       return newEvent;
     } catch (e) {
-      _errorMessage = 'Erreur lors de la création de l\'événement';
+      _isLoading = false;
+      _errorMessage =
+          'Erreur lors de la création de l\'événement: ${e.toString()}';
       notifyListeners();
       return null;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
     }
   }
 
@@ -166,22 +121,38 @@ class EventProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await Future.delayed(const Duration(milliseconds: 500));
+      final eventData = {
+        'title': updatedEvent.title,
+        'description': updatedEvent.description,
+        'startDate': updatedEvent.startDate != null
+            ? Timestamp.fromDate(updatedEvent.startDate!)
+            : null,
+        'endDate': updatedEvent.endDate != null
+            ? Timestamp.fromDate(updatedEvent.endDate!)
+            : null,
+        'location': updatedEvent.location,
+        'status': updatedEvent.status.toString().split('.').last,
+        'participantIds': updatedEvent.participantIds,
+        'maybeIds': updatedEvent.maybeIds,
+        'declinedIds': updatedEvent.declinedIds,
+      };
+
+      await _firestoreService.update('events', updatedEvent.id, eventData);
 
       final index = _events.indexWhere((e) => e.id == updatedEvent.id);
       if (index != -1) {
-        _events[index] = updatedEvent;
-        notifyListeners();
-        return true;
+        _events[index] = updatedEvent.copyWith(updatedAt: DateTime.now());
       }
-      return false;
-    } catch (e) {
-      _errorMessage = 'Erreur lors de la mise à jour de l\'événement';
-      notifyListeners();
-      return false;
-    } finally {
+
       _isLoading = false;
       notifyListeners();
+      return true;
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage =
+          'Erreur lors de la mise à jour de l\'événement: ${e.toString()}';
+      notifyListeners();
+      return false;
     }
   }
 
@@ -192,18 +163,19 @@ class EventProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await Future.delayed(const Duration(milliseconds: 500));
+      await _firestoreService.delete('events', eventId);
 
       _events.removeWhere((e) => e.id == eventId);
+
+      _isLoading = false;
       notifyListeners();
       return true;
     } catch (e) {
-      _errorMessage = 'Erreur lors de la suppression de l\'événement';
+      _isLoading = false;
+      _errorMessage =
+          'Erreur lors de la suppression de l\'événement: ${e.toString()}';
       notifyListeners();
       return false;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
     }
   }
 
@@ -214,8 +186,6 @@ class EventProvider extends ChangeNotifier {
     required ParticipationStatus status,
   }) async {
     try {
-      await Future.delayed(const Duration(milliseconds: 300));
-
       final index = _events.indexWhere((e) => e.id == eventId);
       if (index == -1) return false;
 
@@ -241,17 +211,17 @@ class EventProvider extends ChangeNotifier {
           break;
       }
 
-      _events[index] = event.copyWith(
+      final updatedEvent = event.copyWith(
         participantIds: newParticipantIds,
         maybeIds: newMaybeIds,
         declinedIds: newDeclinedIds,
         updatedAt: DateTime.now(),
       );
 
-      notifyListeners();
-      return true;
+      return await updateEvent(updatedEvent);
     } catch (e) {
-      _errorMessage = 'Erreur lors de la réponse à l\'événement';
+      _errorMessage =
+          'Erreur lors de la réponse à l\'événement: ${e.toString()}';
       notifyListeners();
       return false;
     }
@@ -277,6 +247,58 @@ class EventProvider extends ChangeNotifier {
       (a, b) =>
           (b.startDate ?? b.createdAt).compareTo(a.startDate ?? a.createdAt),
     );
+  }
+
+  /// Nettoyer les erreurs
+  void clearError() {
+    _errorMessage = null;
+    notifyListeners();
+  }
+
+  // ==================== MÉTHODES PRIVÉES ====================
+
+  /// Convertir un document Firestore en Event
+  Event _eventFromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+
+    return Event(
+      id: doc.id,
+      title: data['title'] as String,
+      description: data['description'] as String?,
+      groupId: data['groupId'] as String,
+      creatorId: data['creatorId'] as String,
+      startDate: data['startDate'] != null
+          ? (data['startDate'] as Timestamp).toDate()
+          : null,
+      endDate: data['endDate'] != null
+          ? (data['endDate'] as Timestamp).toDate()
+          : null,
+      location: data['location'] as String?,
+      status: _statusFromString(data['status'] as String?),
+      participantIds: List<String>.from(data['participantIds'] ?? []),
+      maybeIds: List<String>.from(data['maybeIds'] ?? []),
+      declinedIds: List<String>.from(data['declinedIds'] ?? []),
+      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      updatedAt: data['updatedAt'] != null
+          ? (data['updatedAt'] as Timestamp).toDate()
+          : null,
+    );
+  }
+
+  /// Convertir string en EventStatus
+  EventStatus _statusFromString(String? status) {
+    switch (status) {
+      case 'planned':
+        return EventStatus.planned;
+      case 'ongoing':
+        return EventStatus.ongoing;
+      case 'completed':
+        return EventStatus.completed;
+      case 'cancelled':
+        return EventStatus.cancelled;
+      default:
+        return EventStatus.planned;
+    }
   }
 }
 
