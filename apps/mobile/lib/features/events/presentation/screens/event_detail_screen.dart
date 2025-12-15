@@ -103,6 +103,39 @@ class EventDetailScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 24),
 
+                      // Budget
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Budget', style: AppTextStyles.titleMedium),
+                          TextButton.icon(
+                            onPressed: () {
+                              Navigator.of(context).pushNamed(
+                                AppRoutes.budget,
+                                arguments: event.id,
+                              );
+                            },
+                            icon: const Icon(Icons.arrow_forward, size: 18),
+                            label: const Text('Voir tous'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.of(context).pushNamed(
+                            AppRoutes.createBudget,
+                            arguments: event.id,
+                          );
+                        },
+                        icon: const Icon(Icons.add),
+                        label: const Text('Créer un budget'),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(48),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
                       // Participation
                       Text('Ma réponse', style: AppTextStyles.titleMedium),
                       const SizedBox(height: 12),

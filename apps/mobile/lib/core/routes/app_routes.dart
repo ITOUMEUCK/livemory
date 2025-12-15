@@ -24,6 +24,7 @@ class AppRoutes {
 
   static const String budget = '/budget';
   static const String budgetDetail = '/budget/:budgetId';
+  static const String createBudget = '/budget/create';
 
   static const String profile = '/profile';
   static const String settings = '/settings';

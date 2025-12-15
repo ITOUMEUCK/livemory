@@ -228,6 +228,32 @@ class _DashboardTab extends StatelessWidget {
                   ),
                 ],
               ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _QuickActionCard(
+                      icon: Icons.account_balance_wallet,
+                      label: 'Créer un budget',
+                      color: Colors.teal,
+                      onTap: () {
+                        Navigator.of(context).pushNamed(AppRoutes.createBudget);
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _QuickActionCard(
+                      icon: Icons.receipt_long,
+                      label: 'Voir les budgets',
+                      color: Colors.amber,
+                      onTap: () {
+                        Navigator.of(context).pushNamed(AppRoutes.budget);
+                      },
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 24),
 
               // Sondages actifs

@@ -14,6 +14,9 @@ import '../../features/events/presentation/screens/event_detail_screen.dart';
 import '../../features/polls/presentation/screens/polls_list_screen.dart';
 import '../../features/polls/presentation/screens/create_poll_screen.dart';
 import '../../features/polls/presentation/screens/poll_detail_screen.dart';
+import '../../features/budgets/presentation/screens/budgets_list_screen.dart';
+import '../../features/budgets/presentation/screens/create_budget_screen.dart';
+import '../../features/budgets/presentation/screens/budget_detail_screen.dart';
 
 /// Générateur de routes pour l'application
 class RouteGenerator {
@@ -63,6 +66,17 @@ class RouteGenerator {
           fromBottom: true,
         );
 
+      case AppRoutes.budget:
+        final eventId = settings.arguments as String?;
+        return _buildRoute(BudgetsListScreen(eventId: eventId));
+
+      case AppRoutes.createBudget:
+        final eventId = settings.arguments as String?;
+        return _buildSlideRoute(
+          CreateBudgetScreen(eventId: eventId),
+          fromBottom: true,
+        );
+
       default:
         // Vérifier si c'est une route avec paramètres
         if (settings.name?.startsWith('/groups/') == true &&
@@ -81,6 +95,12 @@ class RouteGenerator {
             settings.name != AppRoutes.createPoll) {
           final pollId = settings.name!.split('/').last;
           return _buildRoute(PollDetailScreen(pollId: pollId));
+        }
+
+        if (settings.name?.startsWith('/budget/') == true &&
+            settings.name != AppRoutes.createBudget) {
+          final budgetId = settings.name!.split('/').last;
+          return _buildRoute(BudgetDetailScreen(budgetId: budgetId));
         }
 
         return _buildRoute(_ErrorScreen(routeName: settings.name ?? 'unknown'));
