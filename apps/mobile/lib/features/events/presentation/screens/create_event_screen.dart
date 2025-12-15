@@ -195,7 +195,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
 
             // Bouton créer
             PrimaryButton(
-              label: 'Créer l\'événement',
+              text: 'Créer l\'événement',
               onPressed: _isLoading ? null : _handleCreateEvent,
               isLoading: _isLoading,
             ),

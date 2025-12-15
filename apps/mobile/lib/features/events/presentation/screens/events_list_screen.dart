@@ -96,7 +96,7 @@ class _EventsListScreenState extends State<EventsListScreen>
       return EmptyState(
         icon: Icons.event_available,
         title: 'Aucun événement à venir',
-        message: 'Créez votre premier événement pour commencer !',
+        subtitle: 'Créez votre premier événement pour commencer !',
         actionLabel: 'Créer un événement',
         onAction: () {
           Navigator.of(context).pushNamed(AppRoutes.createEvent);
@@ -132,7 +132,7 @@ class _EventsListScreenState extends State<EventsListScreen>
       return const EmptyState(
         icon: Icons.event_busy,
         title: 'Aucun événement passé',
-        message: 'Vos événements terminés apparaîtront ici',
+        subtitle: 'Vos événements terminés apparaîtront ici',
       );
     }
 
@@ -325,13 +325,17 @@ class _StatusBadge extends StatelessWidget {
     String label;
 
     switch (status) {
+      case EventStatus.draft:
+        color = Colors.grey;
+        label = 'Brouillon';
+        break;
       case EventStatus.planned:
         color = AppColors.primary;
         label = 'Planifié';
         break;
-      case EventStatus.confirmed:
+      case EventStatus.ongoing:
         color = AppColors.secondary;
-        label = 'Confirmé';
+        label = 'En cours';
         break;
       case EventStatus.cancelled:
         color = AppColors.error;

@@ -46,7 +46,7 @@ class _GroupsListScreenState extends State<GroupsListScreen> {
           }
 
           if (groupProvider.errorMessage != null) {
-            return ErrorWidget(
+            return ErrorView(
               message: groupProvider.errorMessage!,
               onRetry: () => groupProvider.fetchGroups(),
             );

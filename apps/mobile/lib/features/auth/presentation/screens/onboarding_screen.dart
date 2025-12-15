@@ -138,43 +138,45 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildPage(OnboardingPage page) {
-    return Padding(
-      padding: const EdgeInsets.all(40.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Icône
-          Container(
-            width: 140,
-            height: 140,
-            decoration: BoxDecoration(
-              color: page.iconColor.withOpacity(0.1),
-              shape: BoxShape.circle,
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(40.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Icône
+            Container(
+              width: 140,
+              height: 140,
+              decoration: BoxDecoration(
+                color: page.iconColor.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(page.icon, size: 80, color: page.iconColor),
             ),
-            child: Icon(page.icon, size: 80, color: page.iconColor),
-          ),
-          const SizedBox(height: 48),
+            const SizedBox(height: 48),
 
-          // Titre
-          Text(
-            page.title,
-            style: AppTextStyles.headlineLarge.copyWith(
-              color: AppColors.textPrimary,
+            // Titre
+            Text(
+              page.title,
+              style: AppTextStyles.headlineLarge.copyWith(
+                color: AppColors.textPrimary,
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
+            const SizedBox(height: 16),
 
-          // Description
-          Text(
-            page.description,
-            style: AppTextStyles.bodyLarge.copyWith(
-              color: AppColors.textSecondary,
-              height: 1.5,
+            // Description
+            Text(
+              page.description,
+              style: AppTextStyles.bodyLarge.copyWith(
+                color: AppColors.textSecondary,
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

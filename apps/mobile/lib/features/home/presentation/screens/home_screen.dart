@@ -6,6 +6,8 @@ import '../../../../core/routes/app_routes.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../groups/presentation/screens/groups_list_screen.dart';
 import '../../../events/presentation/screens/events_list_screen.dart';
+import '../../../polls/presentation/providers/poll_provider.dart';
+import '../../../polls/domain/entities/poll.dart';
 
 /// Écran d'accueil principal avec bottom navigation
 class HomeScreen extends StatefulWidget {
@@ -182,7 +184,9 @@ class _DashboardTab extends StatelessWidget {
                       icon: Icons.event_available,
                       label: 'Créer un événement',
                       color: AppColors.primary,
-                      onTap: () {},
+                      onTap: () {
+                        Navigator.of(context).pushNamed(AppRoutes.createEvent);
+                      },
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -191,10 +195,120 @@ class _DashboardTab extends StatelessWidget {
                       icon: Icons.group_add,
                       label: 'Nouveau groupe',
                       color: AppColors.secondary,
-                      onTap: () {},
+                      onTap: () {
+                        Navigator.of(context).pushNamed(AppRoutes.createGroup);
+                      },
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _QuickActionCard(
+                      icon: Icons.poll,
+                      label: 'Créer un sondage',
+                      color: Colors.purple,
+                      onTap: () {
+                        Navigator.of(context).pushNamed(AppRoutes.createPoll);
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _QuickActionCard(
+                      icon: Icons.list_alt,
+                      label: 'Voir les sondages',
+                      color: Colors.orange,
+                      onTap: () {
+                        Navigator.of(context).pushNamed(AppRoutes.polls);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+
+              // Sondages actifs
+              _SectionHeader(
+                title: 'Sondages actifs',
+                onSeeAll: () {
+                  Navigator.of(context).pushNamed(AppRoutes.polls);
+                },
+              ),
+              const SizedBox(height: 12),
+              Consumer<PollProvider>(
+                builder: (context, pollProvider, child) {
+                  if (pollProvider.isLoading) {
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(24.0),
+                        child: CircularProgressIndicator(),
+                      ),
+                    );
+                  }
+
+                  final activePolls = pollProvider.activePolls.take(3).toList();
+
+                  if (activePolls.isEmpty) {
+                    return Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.divider),
+                      ),
+                      child: Center(
+                        child: Column(
+                          children: [
+                            const Icon(
+                              Icons.poll,
+                              size: 32,
+                              color: AppColors.textSecondary,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Aucun sondage actif',
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+
+                  return Column(
+                    children: activePolls.map((poll) {
+                      String typeIcon;
+                      if (poll.type == PollType.date) {
+                        typeIcon = '📅';
+                      } else if (poll.type == PollType.location) {
+                        typeIcon = '📍';
+                      } else if (poll.type == PollType.activity) {
+                        typeIcon = '🎯';
+                      } else {
+                        typeIcon = '📊';
+                      }
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _PollCard(
+                          question: poll.question,
+                          totalVotes: poll.totalVotes,
+                          optionsCount: poll.options.length,
+                          typeIcon: typeIcon,
+                          onTap: () {
+                            Navigator.of(
+                              context,
+                            ).pushNamed(AppRoutes.pollDetailPath(poll.id));
+                          },
+                        ),
+                      );
+                    }).toList(),
+                  );
+                },
               ),
             ]),
           ),
@@ -548,6 +662,72 @@ class _ProfileMenuItem extends StatelessWidget {
       ),
       trailing: const Icon(Icons.chevron_right),
       onTap: onTap,
+    );
+  }
+}
+
+/// Widget pour afficher un sondage dans le dashboard
+class _PollCard extends StatelessWidget {
+  final String question;
+  final int totalVotes;
+  final int optionsCount;
+  final String typeIcon;
+  final VoidCallback onTap;
+
+  const _PollCard({
+    required this.question,
+    required this.totalVotes,
+    required this.optionsCount,
+    required this.typeIcon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(typeIcon, style: const TextStyle(fontSize: 24)),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      question,
+                      style: AppTextStyles.bodyLarge.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '$totalVotes vote${totalVotes > 1 ? 's' : ''} • $optionsCount option${optionsCount > 1 ? 's' : ''}',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

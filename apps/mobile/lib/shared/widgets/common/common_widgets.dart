@@ -35,12 +35,12 @@ class LoadingIndicator extends StatelessWidget {
 }
 
 /// Widget d'erreur avec bouton retry
-class ErrorWidget extends StatelessWidget {
+class ErrorView extends StatelessWidget {
   final String message;
   final VoidCallback? onRetry;
   final IconData icon;
 
-  const ErrorWidget({
+  const ErrorView({
     super.key,
     required this.message,
     this.onRetry,

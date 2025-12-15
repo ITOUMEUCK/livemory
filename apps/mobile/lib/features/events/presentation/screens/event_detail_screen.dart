@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/routes/app_routes.dart';
 import '../../../../shared/widgets/common/common_widgets.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../providers/event_provider.dart';
@@ -67,6 +68,38 @@ class EventDetailScreen extends StatelessWidget {
                         icon: Icons.event_available,
                         label: 'Statut',
                         value: _getStatusLabel(event.status),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Sondages
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Sondages', style: AppTextStyles.titleMedium),
+                          TextButton.icon(
+                            onPressed: () {
+                              Navigator.of(
+                                context,
+                              ).pushNamed(AppRoutes.polls, arguments: event.id);
+                            },
+                            icon: const Icon(Icons.arrow_forward, size: 18),
+                            label: const Text('Voir tous'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.of(context).pushNamed(
+                            AppRoutes.createPoll,
+                            arguments: event.id,
+                          );
+                        },
+                        icon: const Icon(Icons.add),
+                        label: const Text('Créer un sondage'),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(48),
+                        ),
                       ),
                       const SizedBox(height: 24),
 
@@ -242,10 +275,12 @@ class EventDetailScreen extends StatelessWidget {
 
   String _getStatusLabel(EventStatus status) {
     switch (status) {
+      case EventStatus.draft:
+        return 'Brouillon';
       case EventStatus.planned:
         return 'Planifié';
-      case EventStatus.confirmed:
-        return 'Confirmé';
+      case EventStatus.ongoing:
+        return 'En cours';
       case EventStatus.cancelled:
         return 'Annulé';
       case EventStatus.completed:
