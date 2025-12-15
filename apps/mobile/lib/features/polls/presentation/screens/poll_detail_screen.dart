@@ -494,9 +494,9 @@ class _PollDetailScreenState extends State<PollDetailScreen> {
     });
 
     await pollProvider.vote(
-      pollId: poll.id,
-      userId: userId,
-      optionIds: _selectedOptions.toList(),
+      poll.id,
+      userId,
+      _selectedOptions.toList(),
     );
 
     setState(() {
@@ -521,7 +521,7 @@ class _PollDetailScreenState extends State<PollDetailScreen> {
       _isVoting = true;
     });
 
-    await pollProvider.removeVote(pollId: widget.pollId, userId: userId);
+    await pollProvider.removeVote(widget.pollId, userId);
 
     setState(() {
       _isVoting = false;

@@ -178,7 +178,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /{document=**} {
-      allow read, write: if request.time < timestamp.date(2024, 12, 31);
+      allow read, write: if request.time < timestamp.date(2026, 12, 31);
     }
   }
 }
@@ -271,7 +271,7 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     match /{allPaths=**} {
-      allow read, write: if request.time < timestamp.date(2024, 12, 31);
+      allow read, write: if request.time < timestamp.date(2026, 12, 31);
     }
   }
 }
