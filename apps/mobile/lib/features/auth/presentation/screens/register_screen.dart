@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
+import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/routes/app_routes.dart';
@@ -7,6 +8,7 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/utils/validators.dart';
 import '../../../../core/utils/extensions.dart';
 import '../../../../shared/widgets/buttons/buttons.dart';
+import '../providers/auth_provider.dart';
 
 /// Register screen avec formulaire d'inscription
 class RegisterScreen extends StatefulWidget {
@@ -58,13 +60,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // TODO: Implémenter l'inscription via AuthProvider
-      await Future.delayed(const Duration(seconds: 2)); // Simulation
+      final authProvider = context.read<AuthProvider>();
+      final success = await authProvider.signUpWithEmailPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        name: _nameController.text.trim(),
+      );
 
       if (!mounted) return;
 
-      context.showSuccessSnackBar('Compte créé avec succès ! 🎉');
-      Navigator.of(context).pushReplacementNamed(AppRoutes.home);
+      if (success) {
+        context.showSuccessSnackBar('Compte créé avec succès ! 🎉');
+        Navigator.of(context).pushReplacementNamed(AppRoutes.home);
+      } else {
+        context.showErrorSnackBar(
+          authProvider.errorMessage ?? 'Erreur d\'inscription',
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       context.showErrorSnackBar('Erreur d\'inscription: ${e.toString()}');
@@ -79,13 +91,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // TODO: Implémenter l'inscription sociale
-      await Future.delayed(const Duration(seconds: 2)); // Simulation
+      final authProvider = context.read<AuthProvider>();
+      final bool success;
+      
+      if (provider == 'Google') {
+        success = await authProvider.signInWithGoogle();
+      } else if (provider == 'Apple') {
+        success = await authProvider.signInWithApple();
+      } else {
+        success = false;
+      }
 
       if (!mounted) return;
 
-      context.showSuccessSnackBar('Inscription $provider réussie !');
-      Navigator.of(context).pushReplacementNamed(AppRoutes.home);
+      if (success) {
+        context.showSuccessSnackBar('Inscription $provider réussie !');
+        Navigator.of(context).pushReplacementNamed(AppRoutes.home);
+      } else {
+        context.showErrorSnackBar(
+          authProvider.errorMessage ?? 'Erreur $provider',
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       context.showErrorSnackBar('Erreur $provider: ${e.toString()}');

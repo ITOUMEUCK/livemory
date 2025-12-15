@@ -4,14 +4,13 @@ import '../../features/auth/presentation/screens/splash_screen.dart';
 import '../../features/auth/presentation/screens/onboarding_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
+import '../../features/home/presentation/screens/home_screen.dart';
 
 /// Générateur de routes pour l'application
 class RouteGenerator {
   RouteGenerator._();
 
   static Route<dynamic>? generateRoute(RouteSettings settings) {
-    final args = settings.arguments;
-
     switch (settings.name) {
       case AppRoutes.splash:
         return _buildRoute(const SplashScreen());
@@ -25,9 +24,8 @@ class RouteGenerator {
       case AppRoutes.register:
         return _buildRoute(const RegisterScreen());
 
-      // TODO: Ajouter les autres routes quand les screens seront créés
       case AppRoutes.home:
-        return _buildRoute(_PlaceholderScreen(name: 'Home'));
+        return _buildRoute(const HomeScreen());
 
       default:
         return _buildRoute(_ErrorScreen(routeName: settings.name ?? 'unknown'));

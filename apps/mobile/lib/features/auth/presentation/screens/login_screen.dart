@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
+import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/routes/app_routes.dart';
@@ -7,6 +8,7 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/utils/validators.dart';
 import '../../../../core/utils/extensions.dart';
 import '../../../../shared/widgets/buttons/buttons.dart';
+import '../providers/auth_provider.dart';
 
 /// Login screen avec email/password et auth sociale
 class LoginScreen extends StatefulWidget {
@@ -37,14 +39,22 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // TODO: Implémenter la connexion via AuthProvider
-      await Future.delayed(const Duration(seconds: 2)); // Simulation
+      final authProvider = context.read<AuthProvider>();
+      final success = await authProvider.signInWithEmailPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
 
       if (!mounted) return;
 
-      // Success → Home
-      context.showSuccessSnackBar('Connexion réussie !');
-      Navigator.of(context).pushReplacementNamed(AppRoutes.home);
+      if (success) {
+        context.showSuccessSnackBar('Connexion réussie !');
+        Navigator.of(context).pushReplacementNamed(AppRoutes.home);
+      } else {
+        context.showErrorSnackBar(
+          authProvider.errorMessage ?? 'Erreur de connexion',
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       context.showErrorSnackBar('Erreur de connexion: ${e.toString()}');
@@ -59,13 +69,27 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // TODO: Implémenter l'auth sociale (Google, Apple, Facebook)
-      await Future.delayed(const Duration(seconds: 2)); // Simulation
+      final authProvider = context.read<AuthProvider>();
+      final bool success;
+      
+      if (provider == 'Google') {
+        success = await authProvider.signInWithGoogle();
+      } else if (provider == 'Apple') {
+        success = await authProvider.signInWithApple();
+      } else {
+        success = false;
+      }
 
       if (!mounted) return;
 
-      context.showSuccessSnackBar('Connexion $provider réussie !');
-      Navigator.of(context).pushReplacementNamed(AppRoutes.home);
+      if (success) {
+        context.showSuccessSnackBar('Connexion $provider réussie !');
+        Navigator.of(context).pushReplacementNamed(AppRoutes.home);
+      } else {
+        context.showErrorSnackBar(
+          authProvider.errorMessage ?? 'Erreur $provider',
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       context.showErrorSnackBar('Erreur $provider: ${e.toString()}');
