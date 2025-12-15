@@ -1,8 +1,12 @@
 import 'package:flutter/foundation.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import '../../domain/entities/user.dart';
+import '../../../../core/services/auth_service.dart';
 
 /// Provider pour gérer l'état d'authentification
 class AuthProvider with ChangeNotifier {
+  final AuthService _authService = AuthService();
+
   User? _currentUser;
   AuthStatus _status = AuthStatus.initial;
   String? _errorMessage;
@@ -15,6 +19,21 @@ class AuthProvider with ChangeNotifier {
       _currentUser != null && _status == AuthStatus.authenticated;
   bool get isLoading => _status == AuthStatus.loading;
 
+  /// Initialiser l'écoute des changements d'authentification
+  void initAuthListener() {
+    firebase_auth.FirebaseAuth.instance.authStateChanges().listen((
+      firebaseUser,
+    ) {
+      if (firebaseUser == null) {
+        _currentUser = null;
+        _setStatus(AuthStatus.unauthenticated);
+      } else {
+        // L'utilisateur sera chargé depuis Firestore via checkAuthStatus
+        checkAuthStatus();
+      }
+    });
+  }
+
   /// Connexion avec email et mot de passe
   Future<bool> signInWithEmailPassword({
     required String email,
@@ -23,23 +42,13 @@ class AuthProvider with ChangeNotifier {
     try {
       _setStatus(AuthStatus.loading);
 
-      // TODO: Remplacer par l'appel API réel
-      await Future.delayed(const Duration(seconds: 2));
-
-      // Simulation d'un utilisateur connecté
-      _currentUser = User(
-        id: 'user_123',
-        email: email,
-        name: 'Utilisateur Test',
-        createdAt: DateTime.now(),
-        lastLoginAt: DateTime.now(),
-        isEmailVerified: true,
-      );
+      final user = await _authService.signInWithEmail(email, password);
+      _currentUser = user;
 
       _setStatus(AuthStatus.authenticated);
       return true;
     } catch (e) {
-      _setError('Erreur de connexion: ${e.toString()}');
+      _setError(e.toString());
       return false;
     }
   }
@@ -53,23 +62,17 @@ class AuthProvider with ChangeNotifier {
     try {
       _setStatus(AuthStatus.loading);
 
-      // TODO: Remplacer par l'appel API réel
-      await Future.delayed(const Duration(seconds: 2));
-
-      // Simulation d'un nouvel utilisateur
-      _currentUser = User(
-        id: 'user_${DateTime.now().millisecondsSinceEpoch}',
+      final user = await _authService.signUpWithEmail(
         email: email,
+        password: password,
         name: name,
-        createdAt: DateTime.now(),
-        lastLoginAt: DateTime.now(),
-        isEmailVerified: false,
       );
+      _currentUser = user;
 
       _setStatus(AuthStatus.authenticated);
       return true;
     } catch (e) {
-      _setError('Erreur d\'inscription: ${e.toString()}');
+      _setError(e.toString());
       return false;
     }
   }
@@ -79,23 +82,13 @@ class AuthProvider with ChangeNotifier {
     try {
       _setStatus(AuthStatus.loading);
 
-      // TODO: Implémenter l'authentification Google
-      await Future.delayed(const Duration(seconds: 2));
-
-      _currentUser = User(
-        id: 'google_user_123',
-        email: 'user@gmail.com',
-        name: 'Utilisateur Google',
-        photoUrl: 'https://via.placeholder.com/150',
-        createdAt: DateTime.now(),
-        lastLoginAt: DateTime.now(),
-        isEmailVerified: true,
-      );
+      final user = await _authService.signInWithGoogle();
+      _currentUser = user;
 
       _setStatus(AuthStatus.authenticated);
       return true;
     } catch (e) {
-      _setError('Erreur connexion Google: ${e.toString()}');
+      _setError(e.toString());
       return false;
     }
   }
@@ -130,10 +123,9 @@ class AuthProvider with ChangeNotifier {
     try {
       _setStatus(AuthStatus.loading);
 
-      // TODO: Appeler l'API de déconnexion
-      await Future.delayed(const Duration(milliseconds: 500));
-
+      await _authService.signOut();
       _currentUser = null;
+
       _setStatus(AuthStatus.unauthenticated);
     } catch (e) {
       _setError('Erreur de déconnexion: ${e.toString()}');
@@ -145,12 +137,17 @@ class AuthProvider with ChangeNotifier {
     try {
       _setStatus(AuthStatus.loading);
 
-      // TODO: Vérifier le token stocké localement
-      await Future.delayed(const Duration(seconds: 1));
+      final firebaseUser = firebase_auth.FirebaseAuth.instance.currentUser;
 
-      // Simulation: pas d'utilisateur connecté
-      _currentUser = null;
-      _setStatus(AuthStatus.unauthenticated);
+      if (firebaseUser != null) {
+        // Charger les données utilisateur depuis Firestore
+        final user = await _authService.getUserFromFirestore(firebaseUser.uid);
+        _currentUser = user;
+        _setStatus(AuthStatus.authenticated);
+      } else {
+        _currentUser = null;
+        _setStatus(AuthStatus.unauthenticated);
+      }
     } catch (e) {
       _setError('Erreur vérification auth: ${e.toString()}');
       _setStatus(AuthStatus.unauthenticated);
@@ -168,14 +165,17 @@ class AuthProvider with ChangeNotifier {
     try {
       _setStatus(AuthStatus.loading);
 
-      // TODO: Appeler l'API de mise à jour
-      await Future.delayed(const Duration(seconds: 1));
-
-      _currentUser = _currentUser!.copyWith(
+      final updatedUser = _currentUser!.copyWith(
         name: name ?? _currentUser!.name,
         photoUrl: photoUrl ?? _currentUser!.photoUrl,
         phoneNumber: phoneNumber ?? _currentUser!.phoneNumber,
       );
+
+      await _authService.updateProfile(
+        userId: _currentUser!.id,
+        user: updatedUser,
+      );
+      _currentUser = updatedUser;
 
       _setStatus(AuthStatus.authenticated);
       return true;
@@ -190,13 +190,12 @@ class AuthProvider with ChangeNotifier {
     try {
       _setStatus(AuthStatus.loading);
 
-      // TODO: Appeler l'API de reset password
-      await Future.delayed(const Duration(seconds: 1));
+      await _authService.resetPassword(email);
 
       _setStatus(AuthStatus.unauthenticated);
       return true;
     } catch (e) {
-      _setError('Erreur reset password: ${e.toString()}');
+      _setError(e.toString());
       return false;
     }
   }

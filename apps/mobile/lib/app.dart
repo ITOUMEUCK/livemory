@@ -18,7 +18,14 @@ class LivemoryApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(
+          create: (_) {
+            final authProvider = AuthProvider();
+            // Initialiser l'écoute des changements d'authentification
+            authProvider.initAuthListener();
+            return authProvider;
+          },
+        ),
         ChangeNotifierProvider(create: (_) => GroupProvider()),
         ChangeNotifierProvider(create: (_) => EventProvider()),
         ChangeNotifierProvider(create: (_) => PollProvider()),

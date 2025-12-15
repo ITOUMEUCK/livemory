@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>466303645510-qdg64r5et0gnclqfb3a6p7hgjb7m7b9b.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.466303645510-qdg64r5et0gnclqfb3a6p7hgjb7m7b9b</string>
+	<key>API_KEY</key>
+	<string>AIzaSyCe4EwDLkV85Vx9GdDhMpHscXAQFfiBW38</string>
+	<key>GCM_SENDER_ID</key>
+	<string>466303645510</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.livemory.app</string>
+	<key>PROJECT_ID</key>
+	<string>livemory-22510</string>
+	<key>STORAGE_BUCKET</key>
+	<string>livemory-22510.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:466303645510:ios:b46c783398144906e81747</string>
+</dict>
+</plist>
