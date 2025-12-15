@@ -24,16 +24,21 @@ class NetworkService {
     _isOnline = result.first != ConnectivityResult.none;
 
     // Écouter les changements
-    _connectivity.onConnectivityChanged.listen((List<ConnectivityResult> results) {
+    _connectivity.onConnectivityChanged.listen((
+      List<ConnectivityResult> results,
+    ) {
       final wasOnline = _isOnline;
-      _isOnline = results.isNotEmpty && results.first != ConnectivityResult.none;
+      _isOnline =
+          results.isNotEmpty && results.first != ConnectivityResult.none;
 
       // Notifier seulement si l'état a changé
       if (wasOnline != _isOnline) {
         _connectionController.add(_isOnline);
-        debugPrint(_isOnline
-            ? '✅ Connexion rétablie'
-            : '⚠️ Connexion perdue - Mode hors ligne');
+        debugPrint(
+          _isOnline
+              ? '✅ Connexion rétablie'
+              : '⚠️ Connexion perdue - Mode hors ligne',
+        );
       }
     });
   }
@@ -68,11 +73,7 @@ class NetworkStatusBanner extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
-                  Icons.cloud_off,
-                  color: Colors.white,
-                  size: 16,
-                ),
+                const Icon(Icons.cloud_off, color: Colors.white, size: 16),
                 const SizedBox(width: 8),
                 Flexible(
                   child: Text(
