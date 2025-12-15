@@ -93,7 +93,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     try {
       final authProvider = context.read<AuthProvider>();
       final bool success;
-      
+
       if (provider == 'Google') {
         success = await authProvider.signInWithGoogle();
       } else if (provider == 'Apple') {

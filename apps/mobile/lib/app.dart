@@ -4,6 +4,7 @@ import 'core/theme/app_theme.dart';
 import 'core/routes/app_routes.dart';
 import 'core/routes/route_generator.dart';
 import 'features/auth/presentation/providers/auth_provider.dart';
+import 'features/groups/presentation/providers/group_provider.dart';
 
 class LivemoryApp extends StatelessWidget {
   const LivemoryApp({super.key});
@@ -13,6 +14,7 @@ class LivemoryApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => GroupProvider()),
       ],
       child: MaterialApp(
         title: 'Livemory',

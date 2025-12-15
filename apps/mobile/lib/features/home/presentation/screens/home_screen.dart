@@ -4,6 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../groups/presentation/screens/groups_list_screen.dart';
 
 /// Écran d'accueil principal avec bottom navigation
 class HomeScreen extends StatefulWidget {
@@ -29,10 +30,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final user = authProvider.currentUser;
 
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
-      ),
+      body: IndexedStack(index: _currentIndex, children: _screens),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           boxShadow: [
@@ -138,10 +136,7 @@ class _DashboardTab extends StatelessWidget {
           sliver: SliverList(
             delegate: SliverChildListDelegate([
               // Prochains événements
-              _SectionHeader(
-                title: 'Prochains événements',
-                onSeeAll: () {},
-              ),
+              _SectionHeader(title: 'Prochains événements', onSeeAll: () {}),
               const SizedBox(height: 12),
               _EventCard(
                 title: 'Week-end à la montagne ⛷️',
@@ -159,10 +154,7 @@ class _DashboardTab extends StatelessWidget {
               const SizedBox(height: 24),
 
               // Mes groupes
-              _SectionHeader(
-                title: 'Mes groupes',
-                onSeeAll: () {},
-              ),
+              _SectionHeader(title: 'Mes groupes', onSeeAll: () {}),
               const SizedBox(height: 12),
               SizedBox(
                 height: 100,
@@ -217,20 +209,7 @@ class _GroupsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mes Groupes'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {},
-          ),
-        ],
-      ),
-      body: const Center(
-        child: Text('Liste des groupes - À implémenter'),
-      ),
-    );
+    return const GroupsListScreen();
   }
 }
 
@@ -243,16 +222,9 @@ class _EventsTab extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Événements'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {},
-          ),
-        ],
+        actions: [IconButton(icon: const Icon(Icons.search), onPressed: () {})],
       ),
-      body: const Center(
-        child: Text('Liste des événements - À implémenter'),
-      ),
+      body: const Center(child: Text('Liste des événements - À implémenter')),
     );
   }
 }
@@ -336,11 +308,7 @@ class _ProfileTab extends StatelessWidget {
             title: 'Notifications',
             onTap: () {},
           ),
-          _ProfileMenuItem(
-            icon: Icons.language,
-            title: 'Langue',
-            onTap: () {},
-          ),
+          _ProfileMenuItem(icon: Icons.language, title: 'Langue', onTap: () {}),
           _ProfileMenuItem(
             icon: Icons.help_outline,
             title: 'Aide & Support',
@@ -384,10 +352,7 @@ class _SectionHeader extends StatelessWidget {
       children: [
         Text(title, style: AppTextStyles.titleLarge),
         if (onSeeAll != null)
-          TextButton(
-            onPressed: onSeeAll,
-            child: const Text('Voir tout'),
-          ),
+          TextButton(onPressed: onSeeAll, child: const Text('Voir tout')),
       ],
     );
   }
@@ -442,7 +407,10 @@ class _EventCard extends StatelessWidget {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.secondary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20),
@@ -476,7 +444,9 @@ class _GroupChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.textTertiary.withValues(alpha: 0.2)),
+        border: Border.all(
+          color: AppColors.textTertiary.withValues(alpha: 0.2),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -544,11 +514,16 @@ class _StatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(value, style: AppTextStyles.displaySmall.copyWith(color: AppColors.primary)),
+        Text(
+          value,
+          style: AppTextStyles.displaySmall.copyWith(color: AppColors.primary),
+        ),
         const SizedBox(height: 4),
         Text(
           label,
-          style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+          style: AppTextStyles.bodySmall.copyWith(
+            color: AppColors.textSecondary,
+          ),
         ),
       ],
     );
