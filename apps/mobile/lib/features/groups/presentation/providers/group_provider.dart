@@ -28,7 +28,7 @@ class GroupProvider with ChangeNotifier {
       final querySnapshot = await _firestoreService.query(
         'groups',
         field: 'memberIds',
-        whereIn: [userId],
+        arrayContains: userId,
       );
 
       _groups = querySnapshot.docs.map((doc) {

@@ -34,7 +34,10 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
   @override
   void initState() {
     super.initState();
-    _selectedGroupId = widget.groupId;
+    // Ne pas initialiser si groupId est un placeholder de route
+    if (widget.groupId != null && !widget.groupId!.startsWith(':')) {
+      _selectedGroupId = widget.groupId;
+    }
   }
 
   @override

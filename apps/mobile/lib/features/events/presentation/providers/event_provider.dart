@@ -15,8 +15,8 @@ class EventProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  /// Récupérer tous les événements (ou par groupe)
-  Future<void> fetchEvents({String? groupId}) async {
+  /// Récupérer tous les événements (ou par groupe, ou par participant)
+  Future<void> fetchEvents({String? groupId, String? userId}) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -30,6 +30,15 @@ class EventProvider extends ChangeNotifier {
           'events',
           field: 'groupId',
           isEqualTo: groupId,
+          orderBy: 'startDate',
+          descending: false,
+        );
+      } else if (userId != null) {
+        // Récupérer les événements où l'utilisateur est participant
+        querySnapshot = await _firestoreService.query(
+          'events',
+          field: 'participantIds',
+          arrayContains: userId,
           orderBy: 'startDate',
           descending: false,
         );

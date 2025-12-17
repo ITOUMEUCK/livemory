@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../../shared/widgets/common/common_widgets.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 import '../providers/event_provider.dart';
 import '../../domain/entities/event.dart';
 
@@ -25,7 +26,10 @@ class _EventsListScreenState extends State<EventsListScreen>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<EventProvider>().fetchEvents();
+      final userId = context.read<AuthProvider>().currentUser?.id;
+      if (userId != null) {
+        context.read<EventProvider>().fetchEvents(userId: userId);
+      }
     });
   }
 
@@ -65,7 +69,12 @@ class _EventsListScreenState extends State<EventsListScreen>
           if (eventProvider.errorMessage != null) {
             return ErrorView(
               message: eventProvider.errorMessage!,
-              onRetry: () => eventProvider.fetchEvents(),
+              onRetry: () {
+                final userId = context.read<AuthProvider>().currentUser?.id;
+                if (userId != null) {
+                  eventProvider.fetchEvents(userId: userId);
+                }
+              },
             );
           }
 
@@ -105,7 +114,13 @@ class _EventsListScreenState extends State<EventsListScreen>
     }
 
     return RefreshIndicator(
-      onRefresh: () => eventProvider.fetchEvents(),
+      onRefresh: () {
+        final userId = context.read<AuthProvider>().currentUser?.id;
+        if (userId != null) {
+          return eventProvider.fetchEvents(userId: userId);
+        }
+        return Future.value();
+      },
       child: ListView.separated(
         padding: const EdgeInsets.all(16),
         itemCount: upcomingEvents.length,

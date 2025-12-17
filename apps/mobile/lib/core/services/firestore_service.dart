@@ -99,6 +99,7 @@ class FirestoreService {
     dynamic isGreaterThan,
     dynamic isLessThan,
     List<dynamic>? whereIn,
+    dynamic arrayContains,
     int? limit,
     String? orderBy,
     bool descending = false,
@@ -117,6 +118,9 @@ class FirestoreService {
       }
       if (whereIn != null) {
         query = query.where(field, whereIn: whereIn);
+      }
+      if (arrayContains != null) {
+        query = query.where(field, arrayContains: arrayContains);
       }
     }
 
