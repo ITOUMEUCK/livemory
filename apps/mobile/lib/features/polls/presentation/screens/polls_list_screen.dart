@@ -73,6 +73,7 @@ class _PollsListScreenState extends State<PollsListScreen>
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'polls_create_fab',
         onPressed: () {
           Navigator.of(
             context,

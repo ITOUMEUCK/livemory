@@ -12,6 +12,10 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
 
+      // ============ Typography ============
+      fontFamily: 'Roboto',
+      fontFamilyFallback: const ['Noto Sans', 'Noto Color Emoji'],
+
       // ============ Color Scheme ============
       colorScheme: ColorScheme.light(
         primary: AppColors.primary,
@@ -234,6 +238,10 @@ class AppTheme {
   static ThemeData get darkTheme {
     return ThemeData(
       useMaterial3: true,
+
+      // ============ Typography ============
+      fontFamily: 'Roboto',
+      fontFamilyFallback: const ['Noto Sans', 'Noto Color Emoji'],
 
       // ============ Color Scheme ============
       colorScheme: ColorScheme.dark(

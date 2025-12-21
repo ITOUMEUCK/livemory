@@ -178,6 +178,21 @@ class GroupProvider with ChangeNotifier {
     }
   }
 
+  /// Ajouter plusieurs membres au groupe
+  Future<bool> addMembers(String groupId, List<String> userIds) async {
+    try {
+      final group = _groups.firstWhere((g) => g.id == groupId);
+      final newMemberIds = {...group.memberIds, ...userIds}.toList();
+
+      final updatedGroup = group.copyWith(memberIds: newMemberIds);
+      return await updateGroup(updatedGroup);
+    } catch (e) {
+      _errorMessage = 'Erreur lors de l\'ajout des membres: ${e.toString()}';
+      notifyListeners();
+      return false;
+    }
+  }
+
   /// Retirer un membre du groupe
   Future<bool> removeMember({
     required String groupId,

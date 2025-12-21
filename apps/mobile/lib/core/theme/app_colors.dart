@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
 
 /// Palette de couleurs Livemory
-/// Inspirée de WhatsApp (clarté) × LinkedIn (professionnalisme)
+/// Inspirée de l'identité visuelle de l'application
 class AppColors {
   AppColors._();
 
   // ============ Couleurs Principales ============
 
-  /// LinkedIn Blue - Couleur primaire pour actions principales
-  static const Color primary = Color(0xFF0A66C2);
-  static const Color primaryLight = Color(0xFF378FE9);
-  static const Color primaryDark = Color(0xFF004182);
+  /// Rouge Livemory - Couleur primaire de la marque
+  static const Color primary = Color(0xFFFF5252);
+  static const Color primaryLight = Color(0xFFFF7979);
+  static const Color primaryDark = Color(0xFFE63946);
 
-  /// WhatsApp Green - Couleur secondaire pour validations
-  static const Color secondary = Color(0xFF25D366);
-  static const Color secondaryLight = Color(0xFF64E986);
-  static const Color secondaryDark = Color(0xFF1DA851);
+  /// Corail Livemory - Couleur secondaire pour accents
+  static const Color secondary = Color(0xFFFF6B6B);
+  static const Color secondaryLight = Color(0xFFFF9999);
+  static const Color secondaryDark = Color(0xFFEE5A52);
 
   // ============ Couleurs Neutres ============
 
@@ -42,16 +42,16 @@ class AppColors {
   // ============ Couleurs d'État ============
 
   /// Succès (actions validées)
-  static const Color success = Color(0xFF25D366);
+  static const Color success = Color(0xFF4CAF50);
 
   /// Erreur (messages d'erreur, validation)
-  static const Color error = Color(0xFFED4956);
+  static const Color error = Color(0xFFE63946);
 
   /// Avertissement (alertes budget, etc.)
-  static const Color warning = Color(0xFFFFA500);
+  static const Color warning = Color(0xFFFF9800);
 
   /// Information (tips, notifications)
-  static const Color info = Color(0xFF0095F6);
+  static const Color info = Color(0xFFFF7979);
 
   // ============ Couleurs Spéciales ============
 
@@ -84,10 +84,10 @@ class AppColors {
   // ============ Couleurs par Catégorie Événement ============
 
   static const Color categoryParty = Color(0xFFFF6B9D);
-  static const Color categoryTrip = Color(0xFF4FC3F7);
-  static const Color categoryRestaurant = Color(0xFFFF9800);
-  static const Color categoryHome = Color(0xFF9C27B0);
-  static const Color categoryCultural = Color(0xFF66BB6A);
+  static const Color categoryTrip = Color(0xFFFF9770);
+  static const Color categoryRestaurant = Color(0xFFFFB366);
+  static const Color categoryHome = Color(0xFFFF7979);
+  static const Color categoryCultural = Color(0xFFFF8FA3);
 
   // ============ Mode Sombre (TODO) ============
   // À implémenter pour version 1.1

@@ -30,6 +30,51 @@ class _HomeScreenState extends State<HomeScreen> {
     ProfileScreen(),
   ];
 
+  /// Construit l'icône de profil personnalisée avec la photo de l'utilisateur
+  Widget _buildProfileIcon(BuildContext context, {required bool isActive}) {
+    final user = context.watch<AuthProvider>().currentUser;
+
+    return Container(
+      width: 28,
+      height: 28,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: isActive ? AppColors.primary : AppColors.textSecondary,
+          width: isActive ? 2 : 1.5,
+        ),
+      ),
+      child: ClipOval(
+        child: user?.photoUrl != null && user!.photoUrl!.isNotEmpty
+            ? Image.network(
+                user.photoUrl!,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return _buildDefaultAvatar(user, isActive);
+                },
+              )
+            : _buildDefaultAvatar(user, isActive),
+      ),
+    );
+  }
+
+  /// Avatar par défaut avec initiales si pas de photo
+  Widget _buildDefaultAvatar(user, bool isActive) {
+    return Container(
+      color: AppColors.primary.withValues(alpha: 0.1),
+      child: Center(
+        child: Text(
+          user?.initials ?? 'U',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: isActive ? AppColors.primary : AppColors.textSecondary,
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -63,25 +108,25 @@ class _HomeScreenState extends State<HomeScreen> {
           unselectedItemColor: AppColors.textSecondary,
           selectedFontSize: 12,
           unselectedFontSize: 12,
-          items: const [
-            BottomNavigationBarItem(
+          items: [
+            const BottomNavigationBarItem(
               icon: Icon(Icons.home_outlined),
               activeIcon: Icon(Icons.home),
               label: 'Accueil',
             ),
-            BottomNavigationBarItem(
+            const BottomNavigationBarItem(
               icon: Icon(Icons.groups_outlined),
               activeIcon: Icon(Icons.groups),
               label: 'Groupes',
             ),
-            BottomNavigationBarItem(
+            const BottomNavigationBarItem(
               icon: Icon(Icons.event_outlined),
               activeIcon: Icon(Icons.event),
               label: 'Événements',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline),
-              activeIcon: Icon(Icons.person),
+              icon: _buildProfileIcon(context, isActive: false),
+              activeIcon: _buildProfileIcon(context, isActive: true),
               label: 'Profil',
             ),
           ],
@@ -89,6 +134,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       floatingActionButton: _currentIndex == 2
           ? FloatingActionButton.extended(
+              heroTag: 'home_create_event_fab',
               onPressed: () {
                 Navigator.of(context).pushNamed(AppRoutes.createEvent);
               },
@@ -201,43 +247,48 @@ class _DashboardTabState extends State<_DashboardTab> {
           padding: const EdgeInsets.all(16),
           sliver: SliverList(
             delegate: SliverChildListDelegate([
-              // Prochains événements
-              _SectionHeader(title: 'Prochains événements', onSeeAll: () {}),
-              const SizedBox(height: 12),
-              _EventCard(
-                title: 'Week-end à la montagne ⛷️',
-                date: 'Sam 20 déc - Dim 21 déc',
-                participants: 8,
-                onTap: () {},
+              // Événements actifs (remplace Comptes, assurances)
+              _SectionHeader(
+                title: 'Événements actifs',
+                onSeeAll: () {
+                  Navigator.of(context).pushNamed(AppRoutes.events);
+                },
               ),
-              const SizedBox(height: 12),
-              _EventCard(
-                title: 'Soirée jeux 🎮',
-                date: 'Ven 26 déc à 20h',
-                participants: 5,
-                onTap: () {},
-              ),
-              const SizedBox(height: 24),
-
-              // Mes groupes
-              _SectionHeader(title: 'Mes groupes', onSeeAll: () {}),
               const SizedBox(height: 12),
               SizedBox(
-                height: 100,
+                height: 280,
                 child: ListView(
                   scrollDirection: Axis.horizontal,
                   children: [
-                    _GroupChip(name: 'Famille', members: 12),
+                    _EventCardHorizontal(
+                      title: 'Week-end à la montagne',
+                      icon: '⛷️',
+                      date: 'Sam 20 - Dim 21 déc',
+                      participants: 8,
+                      onTap: () {},
+                    ),
                     const SizedBox(width: 12),
-                    _GroupChip(name: 'Amis Promo', members: 25),
+                    _EventCardHorizontal(
+                      title: 'Soirée jeux',
+                      icon: '🎮',
+                      date: 'Ven 26 déc à 20h',
+                      participants: 5,
+                      onTap: () {},
+                    ),
                     const SizedBox(width: 12),
-                    _GroupChip(name: 'Sport', members: 8),
+                    _EventCardHorizontal(
+                      title: 'Dîner resto',
+                      icon: '🍽️',
+                      date: 'Sam 27 déc à 19h30',
+                      participants: 6,
+                      onTap: () {},
+                    ),
                   ],
                 ),
               ),
               const SizedBox(height: 24),
 
-              // Actions rapides
+              // Actions rapides (Créer événement + Nouveau groupe)
               _SectionHeader(title: 'Actions rapides'),
               const SizedBox(height: 12),
               Row(
@@ -245,7 +296,7 @@ class _DashboardTabState extends State<_DashboardTab> {
                   Expanded(
                     child: _QuickActionCard(
                       icon: Icons.event_available,
-                      label: 'Créer un événement',
+                      label: 'Créer événement',
                       color: AppColors.primary,
                       onTap: () {
                         Navigator.of(context).pushNamed(AppRoutes.createEvent);
@@ -265,137 +316,46 @@ class _DashboardTabState extends State<_DashboardTab> {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _QuickActionCard(
-                      icon: Icons.poll,
-                      label: 'Créer un sondage',
-                      color: Colors.purple,
-                      onTap: () {
-                        Navigator.of(context).pushNamed(AppRoutes.createPoll);
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _QuickActionCard(
-                      icon: Icons.list_alt,
-                      label: 'Voir les sondages',
-                      color: Colors.orange,
-                      onTap: () {
-                        Navigator.of(context).pushNamed(AppRoutes.polls);
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _QuickActionCard(
-                      icon: Icons.account_balance_wallet,
-                      label: 'Créer un budget',
-                      color: Colors.teal,
-                      onTap: () {
-                        Navigator.of(context).pushNamed(AppRoutes.createBudget);
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _QuickActionCard(
-                      icon: Icons.receipt_long,
-                      label: 'Voir les budgets',
-                      color: Colors.amber,
-                      onTap: () {
-                        Navigator.of(context).pushNamed(AppRoutes.budget);
-                      },
-                    ),
-                  ),
-                ],
-              ),
               const SizedBox(height: 24),
 
-              // Sondages actifs
-              _SectionHeader(
-                title: 'Sondages actifs',
-                onSeeAll: () {
-                  Navigator.of(context).pushNamed(AppRoutes.polls);
-                },
-              ),
+              // Sélectionnés pour vous (Offres partenaires)
+              _SectionHeader(title: 'Sélectionnés pour vous', onSeeAll: () {}),
               const SizedBox(height: 12),
               Consumer<PollProvider>(
                 builder: (context, pollProvider, child) {
-                  if (pollProvider.isLoading) {
-                    return const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(24.0),
-                        child: CircularProgressIndicator(),
-                      ),
-                    );
-                  }
-
-                  final activePolls = pollProvider.activePolls.take(3).toList();
-
-                  if (activePolls.isEmpty) {
-                    return Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.divider),
-                      ),
-                      child: Center(
-                        child: Column(
-                          children: [
-                            const Icon(
-                              Icons.poll,
-                              size: 32,
-                              color: AppColors.textSecondary,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Aucun sondage actif',
-                              style: AppTextStyles.bodyMedium.copyWith(
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }
-
+                  // Données mock des offres partenaires
                   return Column(
-                    children: activePolls.map((poll) {
-                      String typeIcon;
-                      if (poll.type == PollType.date) {
-                        typeIcon = '📅';
-                      } else if (poll.type == PollType.location) {
-                        typeIcon = '📍';
-                      } else if (poll.type == PollType.activity) {
-                        typeIcon = '🎯';
-                      } else {
-                        typeIcon = '📊';
-                      }
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _PollCard(
-                          question: poll.question,
-                          totalVotes: poll.totalVotes,
-                          optionsCount: poll.options.length,
-                          typeIcon: typeIcon,
-                          onTap: () {
-                            Navigator.of(
-                              context,
-                            ).pushNamed(AppRoutes.pollDetailPath(poll.id));
-                          },
-                        ),
-                      );
-                    }).toList(),
+                    children: [
+                      _PartnerOfferCard(
+                        icon: '🏠',
+                        title: 'Location de gîte',
+                        subtitle: 'Réservez votre week-end en groupe',
+                        description:
+                            'Profitez de -15% sur les réservations de groupe pour vos prochains événements !',
+                        discount: '-15%',
+                        onTap: () {},
+                      ),
+                      const SizedBox(height: 12),
+                      _PartnerOfferCard(
+                        icon: '🎿',
+                        title: 'Activités outdoor',
+                        subtitle: 'Ski, randonnée et aventure',
+                        description:
+                            'Forfaits de groupe pour vos sorties à la montagne. Économisez jusqu\'à 20% !',
+                        discount: '-20%',
+                        onTap: () {},
+                      ),
+                      const SizedBox(height: 12),
+                      _PartnerOfferCard(
+                        icon: '🍕',
+                        title: 'Restaurants partenaires',
+                        subtitle: 'Réservations de groupe simplifiées',
+                        description:
+                            'Menus spéciaux et réductions pour les groupes de 8 personnes et plus.',
+                        discount: '-10%',
+                        onTap: () {},
+                      ),
+                    ],
                   );
                 },
               ),
@@ -705,6 +665,241 @@ class _PollCard extends StatelessWidget {
                 ),
               ),
               const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Widget pour les offres partenaires
+class _PartnerOfferCard extends StatelessWidget {
+  final String icon;
+  final String title;
+  final String subtitle;
+  final String description;
+  final String discount;
+  final VoidCallback onTap;
+
+  const _PartnerOfferCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.description,
+    required this.discount,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      elevation: 2,
+      child: InkWell(
+        onTap: onTap,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Image/bannière en haut
+            Stack(
+              children: [
+                Container(
+                  height: 200,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.amber.withValues(alpha: 0.4),
+                        Colors.orange.withValues(alpha: 0.3),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  child: Center(
+                    child: Text(icon, style: const TextStyle(fontSize: 80)),
+                  ),
+                ),
+                // Badge réduction
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.green,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      discount,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ),
+                // Icône favoris
+                Positioned(
+                  top: 12,
+                  left: 12,
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.9),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.favorite_border,
+                      size: 20,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            // Infos en dessous
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: AppTextStyles.titleMedium),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    description,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Widget pour les cartes d'événements horizontales
+class _EventCardHorizontal extends StatelessWidget {
+  final String title;
+  final String icon;
+  final String date;
+  final int participants;
+  final VoidCallback onTap;
+
+  const _EventCardHorizontal({
+    required this.title,
+    required this.icon,
+    required this.date,
+    required this.participants,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 280,
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        elevation: 2,
+        child: InkWell(
+          onTap: onTap,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Image en haut avec icône
+              Stack(
+                children: [
+                  Container(
+                    height: 160,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          AppColors.primary.withValues(alpha: 0.3),
+                          AppColors.secondary.withValues(alpha: 0.3),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                    child: Center(
+                      child: Text(icon, style: const TextStyle(fontSize: 64)),
+                    ),
+                  ),
+                  // Icône favoris
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.favorite_border,
+                        size: 20,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              // Infos en dessous
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: AppTextStyles.titleMedium,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      date,
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.people,
+                          size: 14,
+                          color: AppColors.textSecondary,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '$participants participants',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),

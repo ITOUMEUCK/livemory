@@ -1,5 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/constants/app_constants.dart';
@@ -23,6 +26,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
 
+  File? _imageFile;
   bool _isLoading = false;
   bool _isPrivate = false;
   bool _allowMemberInvite = true;
@@ -33,6 +37,47 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
     _nameController.dispose();
     _descriptionController.dispose();
     super.dispose();
+  }
+
+  /// Choisir une image depuis la galerie
+  Future<void> _pickImage() async {
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+
+      if (pickedFile != null) {
+        setState(() {
+          _imageFile = File(pickedFile.path);
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      context.showErrorSnackBar('Erreur lors de la sélection: $e');
+    }
+  }
+
+  /// Uploader l'image sur Firebase Storage
+  Future<String?> _uploadImage(String groupId) async {
+    if (_imageFile == null) return null;
+
+    try {
+      final ref = FirebaseStorage.instance
+          .ref()
+          .child('groups')
+          .child('${groupId}_${DateTime.now().millisecondsSinceEpoch}.jpg');
+
+      await ref.putFile(_imageFile!);
+      return await ref.getDownloadURL();
+    } catch (e) {
+      if (!mounted) return null;
+      context.showErrorSnackBar('Erreur d\'upload: $e');
+      return null;
+    }
   }
 
   Future<void> _handleCreateGroup() async {
@@ -54,6 +99,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
         requireAdminApproval: _requireAdminApproval,
       );
 
+      // Créer le groupe d'abord pour avoir un ID
       final success = await groupProvider.createGroup(
         name: _nameController.text.trim(),
         description: _descriptionController.text.trim().isEmpty
@@ -66,6 +112,20 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
       if (!mounted) return;
 
       if (success) {
+        // Upload de l'image si sélectionnée
+        if (_imageFile != null && groupProvider.groups.isNotEmpty) {
+          final groupId = groupProvider.groups.first.id;
+          final photoUrl = await _uploadImage(groupId);
+
+          if (photoUrl != null) {
+            final updatedGroup = groupProvider.groups.first.copyWith(
+              photoUrl: photoUrl,
+            );
+            await groupProvider.updateGroup(updatedGroup);
+          }
+        }
+
+        if (!mounted) return;
         context.showSuccessSnackBar('Groupe créé avec succès ! 🎉');
         Navigator.of(context).pop();
       } else {
@@ -92,41 +152,61 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            // Photo du groupe (placeholder)
+            // Photo du groupe
             Center(
-              child: Stack(
-                children: [
-                  Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Icon(
-                      Icons.groups,
-                      size: 48,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      width: 32,
-                      height: 32,
+              child: GestureDetector(
+                onTap: _isLoading ? null : _pickImage,
+                child: Stack(
+                  children: [
+                    Container(
+                      width: 100,
+                      height: 100,
                       decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        shape: BoxShape.circle,
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        image: _imageFile != null
+                            ? DecorationImage(
+                                image: FileImage(_imageFile!),
+                                fit: BoxFit.cover,
+                              )
+                            : null,
                       ),
-                      child: Icon(
-                        Icons.camera_alt,
-                        size: 18,
-                        color: Colors.white,
+                      child: _imageFile == null
+                          ? Icon(
+                              Icons.groups,
+                              size: 48,
+                              color: AppColors.primary,
+                            )
+                          : null,
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.camera_alt,
+                          size: 18,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Center(
+              child: Text(
+                'Touchez pour ajouter une photo',
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.textSecondary,
+                ),
               ),
             ),
             const SizedBox(height: 32),

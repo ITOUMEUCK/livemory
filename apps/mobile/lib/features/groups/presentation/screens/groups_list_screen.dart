@@ -142,6 +142,7 @@ class _GroupsListScreenState extends State<GroupsListScreen> {
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'groups_create_fab',
         onPressed: () {
           Navigator.of(context).pushNamed(AppRoutes.createGroup);
         },
@@ -164,129 +165,121 @@ class _GroupCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       clipBehavior: Clip.antiAlias,
+      elevation: 2,
       child: InkWell(
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              // Avatar du groupe
-              _GroupAvatar(photoUrl: group.photoUrl, name: group.name),
-              const SizedBox(width: 16),
-
-              // Infos du groupe
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            group.name,
-                            style: AppTextStyles.titleMedium,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        if (group.settings.isPrivate)
-                          Container(
-                            margin: const EdgeInsets.only(left: 8),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.textTertiary.withValues(
-                                alpha: 0.2,
-                              ),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              'Privé',
-                              style: AppTextStyles.labelSmall.copyWith(
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                          ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Image/bannière du groupe en haut
+            Stack(
+              children: [
+                Container(
+                  height: 160,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.primary.withValues(alpha: 0.3),
+                        AppColors.secondary.withValues(alpha: 0.3),
                       ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                    if (group.description != null) ...[
-                      const SizedBox(height: 4),
+                  ),
+                  child: group.photoUrl != null
+                      ? Image.network(
+                          group.photoUrl!,
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Center(child: _buildInitials());
+                          },
+                        )
+                      : Center(child: _buildInitials()),
+                ),
+                // Badge privé
+                if (group.settings.isPrivate)
+                  Positioned(
+                    top: 12,
+                    right: 12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.lock, size: 14, color: Colors.white),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Privé',
+                            style: AppTextStyles.labelSmall.copyWith(
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            // Infos en dessous
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    group.name,
+                    style: AppTextStyles.titleMedium,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (group.description != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      group.description!,
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.people,
+                        size: 16,
+                        color: AppColors.textSecondary,
+                      ),
+                      const SizedBox(width: 4),
                       Text(
-                        group.description!,
+                        '${group.memberCount} membre${group.memberCount > 1 ? 's' : ''}',
                         style: AppTextStyles.bodySmall.copyWith(
                           color: AppColors.textSecondary,
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.people,
-                          size: 16,
-                          color: AppColors.textSecondary,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${group.memberCount} membre${group.memberCount > 1 ? 's' : ''}',
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-
-              // Icône chevron
-              Icon(Icons.chevron_right, color: AppColors.textTertiary),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
-}
-
-/// Avatar d'un groupe
-class _GroupAvatar extends StatelessWidget {
-  final String? photoUrl;
-  final String name;
-
-  const _GroupAvatar({this.photoUrl, required this.name});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 56,
-      height: 56,
-      decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: photoUrl != null
-          ? ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                photoUrl!,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return _buildInitials();
-                },
-              ),
-            )
-          : _buildInitials(),
-    );
-  }
 
   Widget _buildInitials() {
-    final initials = name.isNotEmpty
-        ? name
+    final initials = group.name.isNotEmpty
+        ? group.name
               .split(' ')
               .take(2)
               .map((word) => word.isNotEmpty ? word[0] : '')
@@ -294,10 +287,12 @@ class _GroupAvatar extends StatelessWidget {
               .toUpperCase()
         : 'G';
 
-    return Center(
-      child: Text(
-        initials,
-        style: AppTextStyles.titleLarge.copyWith(color: AppColors.primary),
+    return Text(
+      initials,
+      style: const TextStyle(
+        fontSize: 48,
+        fontWeight: FontWeight.bold,
+        color: Colors.white,
       ),
     );
   }

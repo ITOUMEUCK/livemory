@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
-import '../../../auth/domain/entities/user.dart';
+import '../widgets/profile_photo_picker.dart';
 
 /// Écran d'édition du profil utilisateur
 class EditProfileScreen extends StatefulWidget {
@@ -98,45 +98,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           children: [
             // Photo de profil
             Center(
-              child: Stack(
+              child: Column(
                 children: [
-                  CircleAvatar(
-                    radius: 60,
-                    backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                    child: user?.photoUrl != null
-                        ? ClipOval(
-                            child: Image.network(
-                              user!.photoUrl!,
-                              width: 120,
-                              height: 120,
-                              fit: BoxFit.cover,
-                            ),
-                          )
-                        : Text(
-                            user?.initials ?? 'U',
-                            style: AppTextStyles.displayLarge.copyWith(
-                              color: AppColors.primary,
-                            ),
-                          ),
+                  ProfilePhotoPicker(
+                    currentPhotoUrl: user?.photoUrl,
+                    userId: user?.id ?? '',
+                    onPhotoUpdated: (photoUrl) async {
+                      await context.read<AuthProvider>().updateProfile(
+                        photoUrl: photoUrl,
+                      );
+                    },
                   ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Material(
-                      color: AppColors.secondary,
-                      shape: const CircleBorder(),
-                      child: InkWell(
-                        onTap: _changePhoto,
-                        customBorder: const CircleBorder(),
-                        child: const Padding(
-                          padding: EdgeInsets.all(12),
-                          child: Icon(
-                            Icons.camera_alt,
-                            size: 24,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Touchez pour changer la photo',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textSecondary,
                     ),
                   ),
                 ],
@@ -161,23 +138,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Email
+            // Email (lecture seule)
             TextFormField(
               controller: _emailController,
               decoration: const InputDecoration(
                 labelText: 'Email',
                 prefixIcon: Icon(Icons.email_outlined),
+                suffixIcon: Icon(Icons.lock_outline, size: 18),
+                helperText: 'L\'email ne peut pas être modifié',
               ),
-              keyboardType: TextInputType.emailAddress,
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'L\'email est requis';
-                }
-                if (!value.contains('@')) {
-                  return 'Email invalide';
-                }
-                return null;
-              },
+              enabled: false,
             ),
             const SizedBox(height: 32),
 
@@ -210,48 +180,5 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ),
       ),
     );
-  }
-
-  Future<void> _changePhoto() async {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_camera),
-              title: const Text('Prendre une photo'),
-              onTap: () {
-                Navigator.of(context).pop();
-                _showComingSoon('Prendre une photo');
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: const Text('Choisir depuis la galerie'),
-              onTap: () {
-                Navigator.of(context).pop();
-                _showComingSoon('Galerie');
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.delete_outline),
-              title: const Text('Supprimer la photo'),
-              onTap: () {
-                Navigator.of(context).pop();
-                _showComingSoon('Supprimer la photo');
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showComingSoon(String feature) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('$feature - Bientôt disponible !')));
   }
 }

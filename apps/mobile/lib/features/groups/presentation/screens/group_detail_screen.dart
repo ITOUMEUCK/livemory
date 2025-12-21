@@ -5,6 +5,8 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../providers/group_provider.dart';
 import '../../domain/entities/group.dart';
+import 'add_members_screen.dart';
+import 'edit_group_screen.dart';
 
 /// Écran détail d'un groupe
 class GroupDetailScreen extends StatelessWidget {
@@ -92,7 +94,12 @@ class GroupDetailScreen extends StatelessWidget {
                         label: 'Inviter des membres',
                         color: AppColors.secondary,
                         onTap: () {
-                          // TODO: Implémenter invitation
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  AddMembersScreen(groupId: groupId),
+                            ),
+                          );
                         },
                       ),
                       const SizedBox(height: 24),
@@ -243,7 +250,17 @@ class GroupDetailScreen extends StatelessWidget {
             ),
           ],
           onSelected: (value) {
-            // TODO: Implémenter les actions
+            if (value == 'edit') {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => EditGroupScreen(group: group),
+                ),
+              );
+            } else if (value == 'settings') {
+              // TODO: Implémenter les paramètres
+            } else if (value == 'leave') {
+              // TODO: Implémenter quitter le groupe
+            }
           },
         ),
       ],

@@ -88,6 +88,7 @@ class _EventsListScreenState extends State<EventsListScreen>
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'events_create_fab',
         onPressed: () {
           Navigator.of(context).pushNamed(AppRoutes.createEvent);
         },
@@ -184,126 +185,173 @@ class _EventCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final eventIcon = _getEventIcon();
+
     return Card(
+      clipBehavior: Clip.antiAlias,
+      elevation: 2,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      event.title,
-                      style: AppTextStyles.titleMedium.copyWith(
-                        color: isPast ? AppColors.textSecondary : null,
-                      ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Image/bannière événement en haut
+            Stack(
+              children: [
+                Container(
+                  height: 160,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: isPast
+                          ? [
+                              Colors.grey.withValues(alpha: 0.3),
+                              Colors.grey.withValues(alpha: 0.2),
+                            ]
+                          : [
+                              AppColors.primary.withValues(alpha: 0.3),
+                              AppColors.secondary.withValues(alpha: 0.3),
+                            ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
                   ),
-                  if (isPast)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.textSecondary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        'Terminé',
-                        style: AppTextStyles.labelSmall.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    )
-                  else
-                    _StatusBadge(status: event.status),
-                ],
-              ),
-              if (event.description != null) ...[
-                const SizedBox(height: 4),
-                Text(
-                  event.description!,
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.textSecondary,
+                  child: Center(
+                    child: Text(
+                      eventIcon,
+                      style: const TextStyle(fontSize: 64),
+                    ),
                   ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                ),
+                // Badge statut
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: isPast
+                      ? Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black54,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            'Terminé',
+                            style: AppTextStyles.labelSmall.copyWith(
+                              color: Colors.white,
+                            ),
+                          ),
+                        )
+                      : _StatusBadge(status: event.status),
                 ),
               ],
-              const SizedBox(height: 12),
-              Row(
+            ),
+            // Infos en dessous
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    Icons.calendar_today,
-                    size: 16,
-                    color: AppColors.textSecondary,
+                  Text(
+                    event.title,
+                    style: AppTextStyles.titleMedium,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      _formatEventDate(),
+                  if (event.description != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      event.description!,
                       style: AppTextStyles.bodySmall.copyWith(
                         color: AppColors.textSecondary,
                       ),
-                    ),
-                  ),
-                ],
-              ),
-              if (event.location != null) ...[
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.location_on,
-                      size: 16,
-                      color: AppColors.textSecondary,
-                    ),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        event.location!,
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
-                ),
-              ],
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  _ParticipationChip(
-                    icon: Icons.check_circle,
-                    label: '${event.confirmedCount}',
-                    color: AppColors.secondary,
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.calendar_today,
+                        size: 14,
+                        color: AppColors.textSecondary,
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          _formatEventDate(),
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  _ParticipationChip(
-                    icon: Icons.help_outline,
-                    label: '${event.maybeIds.length}',
-                    color: Colors.orange,
-                  ),
-                  const SizedBox(width: 8),
-                  _ParticipationChip(
-                    icon: Icons.cancel,
-                    label: '${event.declinedIds.length}',
-                    color: AppColors.error,
+                  if (event.location != null) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.location_on,
+                          size: 14,
+                          color: AppColors.textSecondary,
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            event.location!,
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      _ParticipationChip(
+                        icon: Icons.check_circle,
+                        label: '${event.confirmedCount}',
+                        color: AppColors.secondary,
+                      ),
+                      const SizedBox(width: 8),
+                      _ParticipationChip(
+                        icon: Icons.help_outline,
+                        label: '${event.maybeIds.length}',
+                        color: Colors.orange,
+                      ),
+                      const SizedBox(width: 8),
+                      _ParticipationChip(
+                        icon: Icons.cancel,
+                        label: '${event.declinedIds.length}',
+                        color: AppColors.error,
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
+  }
+
+  String _getEventIcon() {
+    final title = event.title.toLowerCase();
+    if (title.contains('montagne') || title.contains('ski')) return '⛷️';
+    if (title.contains('jeu')) return '🎮';
+    if (title.contains('resto') || title.contains('dîner')) return '🍽️';
+    if (title.contains('sport')) return '⚽';
+    if (title.contains('cinéma') || title.contains('film')) return '🎬';
+    if (title.contains('soirée')) return '🎉';
+    return '📅';
   }
 
   String _formatEventDate() {

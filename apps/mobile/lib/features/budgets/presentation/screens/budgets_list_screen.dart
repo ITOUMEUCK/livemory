@@ -107,6 +107,7 @@ class _BudgetsListScreenState extends State<BudgetsListScreen> {
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'budgets_create_fab',
         onPressed: () {
           Navigator.of(
             context,
