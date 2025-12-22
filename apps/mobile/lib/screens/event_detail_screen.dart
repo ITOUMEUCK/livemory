@@ -8,6 +8,8 @@ import 'tasks_tab.dart';
 import 'budget_tab.dart';
 import 'votes_tab.dart';
 import 'media_tab.dart';
+import '../features/events/presentation/screens/event_activities_tab.dart';
+import '../features/events/presentation/screens/event_todos_tab.dart';
 
 class EventDetailScreen extends StatefulWidget {
   final String eventId;
@@ -25,7 +27,10 @@ class _EventDetailScreenState extends State<EventDetailScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 7, vsync: this);
+    _tabController.addListener(() {
+      setState(() {}); // Rebuild pour mettre à jour le FAB
+    });
     Future.microtask(() {
       context.read<EventProvider>().loadEvent(widget.eventId);
     });
@@ -89,8 +94,14 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                       labelColor: Theme.of(context).colorScheme.primary,
                       unselectedLabelColor: Colors.grey,
                       indicatorColor: Theme.of(context).colorScheme.primary,
+                      isScrollable: true,
                       tabs: const [
                         Tab(icon: Icon(Icons.people), text: 'Participants'),
+                        Tab(
+                          icon: Icon(Icons.event_available),
+                          text: 'Activités',
+                        ),
+                        Tab(icon: Icon(Icons.checklist), text: 'TODO'),
                         Tab(icon: Icon(Icons.task_alt), text: 'Tâches'),
                         Tab(
                           icon: Icon(Icons.account_balance_wallet),
@@ -105,6 +116,8 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                         controller: _tabController,
                         children: [
                           ParticipantsTab(eventId: event.id),
+                          EventActivitiesTab(eventId: event.id),
+                          EventTodosTab(eventId: event.id),
                           TasksTab(eventId: event.id),
                           BudgetTab(eventId: event.id),
                           VotesTab(eventId: event.id),

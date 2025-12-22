@@ -7,19 +7,47 @@ import '../../../../core/routes/app_routes.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../providers/event_provider.dart';
 import '../../domain/entities/event.dart';
+import 'event_info_tab.dart';
+import 'event_activities_tab.dart';
+import 'event_todos_tab.dart';
 
 /// Écran détail d'un événement
-class EventDetailScreen extends StatelessWidget {
+class EventDetailScreen extends StatefulWidget {
   final String eventId;
 
   const EventDetailScreen({super.key, required this.eventId});
+
+  @override
+  State<EventDetailScreen> createState() => _EventDetailScreenState();
+}
+
+class _EventDetailScreenState extends State<EventDetailScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  final GlobalKey<EventActivitiesTabState> _activitiesKey = GlobalKey();
+  final GlobalKey<EventTodosTabState> _todosKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(() {
+      setState(() {}); // Rebuild pour mettre à jour le FAB
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Consumer2<EventProvider, AuthProvider>(
       builder: (context, eventProvider, authProvider, child) {
         final event = eventProvider.events.firstWhere(
-          (e) => e.id == eventId,
+          (e) => e.id == widget.eventId,
           orElse: () => eventProvider.events.first,
         );
 
@@ -27,219 +55,88 @@ class EventDetailScreen extends StatelessWidget {
         final isCreator = event.creatorId == userId;
 
         return Scaffold(
-          body: CustomScrollView(
-            slivers: [
-              _buildAppBar(context, event, isCreator),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+          body: NestedScrollView(
+            headerSliverBuilder: (context, innerBoxIsScrolled) {
+              return [_buildAppBar(context, event, isCreator)];
+            },
+            body: Column(
+              children: [
+                TabBar(
+                  controller: _tabController,
+                  labelColor: AppColors.primary,
+                  unselectedLabelColor: AppColors.textSecondary,
+                  indicatorColor: AppColors.primary,
+                  tabs: const [
+                    Tab(icon: Icon(Icons.info_outline), text: 'Infos'),
+                    Tab(icon: Icon(Icons.event_available), text: 'Activités'),
+                    Tab(icon: Icon(Icons.checklist), text: 'TODO'),
+                  ],
+                ),
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabController,
                     children: [
-                      // Description
-                      if (event.description != null) ...[
-                        Text('Description', style: AppTextStyles.titleMedium),
-                        const SizedBox(height: 8),
-                        Text(
-                          event.description!,
-                          style: AppTextStyles.bodyMedium.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                      ],
-
-                      // Informations
-                      Text('Informations', style: AppTextStyles.titleMedium),
-                      const SizedBox(height: 12),
-                      _InfoRow(
-                        icon: Icons.calendar_today,
-                        label: 'Date',
-                        value: _formatEventDate(event),
+                      EventInfoTab(
+                        event: event,
+                        userId: userId,
+                        isCreator: isCreator,
                       ),
-                      if (event.location != null)
-                        _InfoRow(
-                          icon: Icons.location_on,
-                          label: 'Lieu',
-                          value: event.location!,
-                        ),
-                      _InfoRow(
-                        icon: Icons.event_available,
-                        label: 'Statut',
-                        value: _getStatusLabel(event.status),
+                      EventActivitiesTab(
+                        key: _activitiesKey,
+                        eventId: widget.eventId,
                       ),
-                      const SizedBox(height: 24),
-
-                      // Sondages
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Sondages', style: AppTextStyles.titleMedium),
-                          TextButton.icon(
-                            onPressed: () {
-                              Navigator.of(
-                                context,
-                              ).pushNamed(AppRoutes.polls, arguments: event.id);
-                            },
-                            icon: const Icon(Icons.arrow_forward, size: 18),
-                            label: const Text('Voir tous'),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      OutlinedButton.icon(
-                        onPressed: () {
-                          Navigator.of(context).pushNamed(
-                            AppRoutes.createPoll,
-                            arguments: event.id,
-                          );
-                        },
-                        icon: const Icon(Icons.add),
-                        label: const Text('Créer un sondage'),
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(48),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Budget
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Budget', style: AppTextStyles.titleMedium),
-                          TextButton.icon(
-                            onPressed: () {
-                              Navigator.of(context).pushNamed(
-                                AppRoutes.budget,
-                                arguments: event.id,
-                              );
-                            },
-                            icon: const Icon(Icons.arrow_forward, size: 18),
-                            label: const Text('Voir tous'),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      OutlinedButton.icon(
-                        onPressed: () {
-                          Navigator.of(context).pushNamed(
-                            AppRoutes.createBudget,
-                            arguments: event.id,
-                          );
-                        },
-                        icon: const Icon(Icons.add),
-                        label: const Text('Créer un budget'),
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(48),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Participation
-                      Text('Ma réponse', style: AppTextStyles.titleMedium),
-                      const SizedBox(height: 12),
-                      _ParticipationButtons(event: event, userId: userId),
-                      const SizedBox(height: 24),
-
-                      // Statistiques de participation
-                      Text('Participants', style: AppTextStyles.titleMedium),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _StatCard(
-                              icon: Icons.check_circle,
-                              label: 'Confirmés',
-                              value: '${event.confirmedCount}',
-                              color: AppColors.secondary,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _StatCard(
-                              icon: Icons.help_outline,
-                              label: 'Peut-être',
-                              value: '${event.maybeIds.length}',
-                              color: Colors.orange,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _StatCard(
-                              icon: Icons.cancel,
-                              label: 'Refusés',
-                              value: '${event.declinedIds.length}',
-                              color: AppColors.error,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Liste des participants confirmés
-                      if (event.participantIds.isNotEmpty) ...[
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Confirmés (${event.confirmedCount})',
-                              style: AppTextStyles.titleSmall,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        SizedBox(
-                          height: 80,
-                          child: ListView.separated(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: event.participantIds.length,
-                            separatorBuilder: (context, index) =>
-                                const SizedBox(width: 12),
-                            itemBuilder: (context, index) {
-                              return _ParticipantAvatar(
-                                userId: event.participantIds[index],
-                                isCreator:
-                                    event.participantIds[index] ==
-                                    event.creatorId,
-                              );
-                            },
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                      ],
-
-                      // Actions
-                      if (isCreator) ...[
-                        Text('Actions', style: AppTextStyles.titleMedium),
-                        const SizedBox(height: 12),
-                        _ActionButton(
-                          icon: Icons.edit,
-                          label: 'Modifier l\'événement',
-                          color: AppColors.primary,
-                          onTap: () {
-                            // TODO: Implémenter modification
-                          },
-                        ),
-                        const SizedBox(height: 8),
-                        _ActionButton(
-                          icon: Icons.delete,
-                          label: 'Supprimer l\'événement',
-                          color: AppColors.error,
-                          onTap: () => _showDeleteDialog(context, event),
-                        ),
-                      ],
+                      EventTodosTab(key: _todosKey, eventId: widget.eventId),
                     ],
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
+          floatingActionButton: _buildFAB(),
         );
       },
     );
   }
 
-  Widget _buildAppBar(BuildContext context, Event event, bool isCreator) {
+  Widget? _buildFAB() {
+    // Afficher le FAB selon l'onglet actif
+    if (_tabController.index == 1) {
+      // Onglet Activités
+      return FloatingActionButton.extended(
+        heroTag: 'add_activity',
+        onPressed: () {
+          // Afficher le dialogue d'ajout d'activité
+          _showAddActivityDialog();
+        },
+        icon: const Icon(Icons.add),
+        label: const Text('Activité'),
+        backgroundColor: AppColors.primary,
+      );
+    } else if (_tabController.index == 2) {
+      // Onglet TODO
+      return FloatingActionButton.extended(
+        heroTag: 'add_todo',
+        onPressed: () {
+          // Afficher le dialogue d'ajout de TODO
+          _showAddTodoDialog();
+        },
+        icon: const Icon(Icons.add),
+        label: const Text('TODO'),
+        backgroundColor: AppColors.primary,
+      );
+    }
+    return null;
+  }
+
+  void _showAddActivityDialog() {
+    _activitiesKey.currentState?.showActivityDialog();
+  }
+
+  void _showAddTodoDialog() {
+    _todosKey.currentState?.showTodoDetailDialog();
+  }
+
+  SliverAppBar _buildAppBar(BuildContext context, Event event, bool isCreator) {
     return SliverAppBar(
       expandedHeight: 200,
       pinned: true,
