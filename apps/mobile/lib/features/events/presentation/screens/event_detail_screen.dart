@@ -4,8 +4,10 @@ import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/routes/app_routes.dart';
+import '../../../../shared/widgets/user/user_avatar.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../providers/event_provider.dart';
+import '../providers/todo_list_provider.dart';
 import '../../domain/entities/event.dart';
 import 'event_info_tab.dart';
 import 'event_activities_tab.dart';
@@ -92,16 +94,16 @@ class _EventDetailScreenState extends State<EventDetailScreen>
               ],
             ),
           ),
-          floatingActionButton: _buildFAB(),
+          floatingActionButton: _buildFAB(isCreator),
         );
       },
     );
   }
 
-  Widget? _buildFAB() {
+  Widget? _buildFAB(bool isCreator) {
     // Afficher le FAB selon l'onglet actif
     if (_tabController.index == 1) {
-      // Onglet Activités
+      // Onglet Activités - Tous les participants peuvent ajouter des activités
       return FloatingActionButton.extended(
         heroTag: 'add_activity',
         onPressed: () {
@@ -113,7 +115,18 @@ class _EventDetailScreenState extends State<EventDetailScreen>
         backgroundColor: AppColors.primary,
       );
     } else if (_tabController.index == 2) {
-      // Onglet TODO
+      // Onglet TODO - Seul le créateur peut ajouter une TODO
+      if (!isCreator) return null;
+
+      // Vérifier s'il n'y a pas déjà une TODO
+      final todoProvider = context.watch<TodoListProvider>();
+      final existingTodos = todoProvider.getTodoListsByEvent(widget.eventId);
+
+      // Si une TODO existe déjà, ne pas afficher le bouton d'ajout
+      if (existingTodos.isNotEmpty) {
+        return null;
+      }
+
       return FloatingActionButton.extended(
         heroTag: 'add_todo',
         onPressed: () {
@@ -443,40 +456,22 @@ class _ParticipantAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Stack(
-          children: [
-            CircleAvatar(
-              radius: 24,
-              backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-              child: Text(
-                userId[0].toUpperCase(),
-                style: AppTextStyles.titleMedium.copyWith(
-                  color: AppColors.primary,
-                ),
+    return UserAvatar(
+      userId: userId,
+      radius: 24,
+      showName: true,
+      badge: isCreator
+          ? Container(
+              width: 16,
+              height: 16,
+              decoration: BoxDecoration(
+                color: AppColors.secondary,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 2),
               ),
-            ),
-            if (isCreator)
-              Positioned(
-                bottom: 0,
-                right: 0,
-                child: Container(
-                  width: 16,
-                  height: 16,
-                  decoration: BoxDecoration(
-                    color: AppColors.secondary,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
-                  ),
-                  child: const Icon(Icons.star, size: 10, color: Colors.white),
-                ),
-              ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text('User ${userId.substring(5)}', style: AppTextStyles.labelSmall),
-      ],
+              child: const Icon(Icons.star, size: 10, color: Colors.white),
+            )
+          : null,
     );
   }
 }

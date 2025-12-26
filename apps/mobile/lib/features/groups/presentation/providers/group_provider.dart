@@ -2,10 +2,19 @@ import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../domain/entities/group.dart';
 import '../../../../core/services/firestore_service.dart';
+import '../../../notifications/presentation/providers/notification_provider.dart';
+import '../../../notifications/domain/entities/notification.dart'
+    as app_notification;
 
 /// Provider pour gérer les groupes
 class GroupProvider with ChangeNotifier {
   final FirestoreService _firestoreService = FirestoreService();
+  NotificationProvider? _notificationProvider;
+
+  // Injecter le NotificationProvider
+  void setNotificationProvider(NotificationProvider provider) {
+    _notificationProvider = provider;
+  }
 
   List<Group> _groups = [];
   Group? _selectedGroup;
@@ -179,14 +188,102 @@ class GroupProvider with ChangeNotifier {
   }
 
   /// Ajouter plusieurs membres au groupe
-  Future<bool> addMembers(String groupId, List<String> userIds) async {
+  Future<bool> addMembers(
+    String groupId,
+    List<String> userIds, {
+    String? invitedBy,
+  }) async {
     try {
-      final group = _groups.firstWhere((g) => g.id == groupId);
+      print('GroupProvider.addMembers - Début');
+      print('groupId: $groupId');
+      print('userIds: $userIds');
+      print('Nombre de groupes chargés: ${_groups.length}');
+
+      final group = _groups.firstWhere(
+        (g) => g.id == groupId,
+        orElse: () =>
+            throw Exception('Groupe $groupId non trouvé dans la liste'),
+      );
+
+      print('Groupe trouvé: ${group.name}');
+      print('Membres actuels: ${group.memberIds}');
+
       final newMemberIds = {...group.memberIds, ...userIds}.toList();
+      print('Nouveaux membres après fusion: $newMemberIds');
 
       final updatedGroup = group.copyWith(memberIds: newMemberIds);
-      return await updateGroup(updatedGroup);
+      print('Appel updateGroup...');
+
+      final success = await updateGroup(updatedGroup);
+      print('updateGroup résultat: $success');
+
+      // Envoyer des notifications aux nouveaux membres
+      if (success && _notificationProvider != null) {
+        print('Envoi des notifications...');
+
+        // Récupérer les événements actifs du groupe
+        final groupEventsQuery = await _firestoreService.query(
+          'events',
+          field: 'groupId',
+          isEqualTo: groupId,
+        );
+
+        final now = DateTime.now();
+        final activeEvents = groupEventsQuery.docs.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          final endDate = data['endDate'] != null
+              ? (data['endDate'] as Timestamp).toDate()
+              : null;
+          // Événement actif = pas encore terminé
+          return endDate == null || endDate.isAfter(now);
+        }).toList();
+
+        print('Événements actifs du groupe: ${activeEvents.length}');
+
+        for (final userId in userIds) {
+          if (!group.memberIds.contains(userId)) {
+            print('Envoi notification à $userId');
+
+            // Notification d'ajout au groupe
+            await _notificationProvider!.createNotification(
+              userId: userId,
+              type: app_notification.NotificationType.invitation,
+              title: 'Invitation à un groupe',
+              message: 'Vous avez été ajouté au groupe "${group.name}"',
+              metadata: {
+                'groupId': groupId,
+                'groupName': group.name,
+                'invitedBy': invitedBy,
+              },
+            );
+
+            // Notifications pour chaque événement actif du groupe
+            for (final eventDoc in activeEvents) {
+              final eventData = eventDoc.data() as Map<String, dynamic>;
+              final eventTitle = eventData['title'] as String;
+
+              await _notificationProvider!.createNotification(
+                userId: userId,
+                type: app_notification.NotificationType.eventUpdate,
+                title: 'Événement en cours',
+                message:
+                    'Le groupe "${group.name}" a un événement actif: "$eventTitle"',
+                metadata: {
+                  'eventId': eventDoc.id,
+                  'eventTitle': eventTitle,
+                  'groupId': groupId,
+                  'groupName': group.name,
+                },
+              );
+            }
+          }
+        }
+      }
+
+      print('GroupProvider.addMembers - Fin avec succès: $success');
+      return success;
     } catch (e) {
+      print('GroupProvider.addMembers - Erreur: $e');
       _errorMessage = 'Erreur lors de l\'ajout des membres: ${e.toString()}';
       notifyListeners();
       return false;
@@ -231,6 +328,27 @@ class GroupProvider with ChangeNotifier {
       return true;
     } catch (e) {
       _errorMessage = 'Erreur lors de la promotion: ${e.toString()}';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Rétrograder un admin en membre normal
+  Future<bool> demoteAdmin({
+    required String groupId,
+    required String userId,
+  }) async {
+    try {
+      final group = _groups.firstWhere((g) => g.id == groupId);
+      if (group.adminIds.contains(userId)) {
+        final updatedGroup = group.copyWith(
+          adminIds: group.adminIds.where((id) => id != userId).toList(),
+        );
+        return await updateGroup(updatedGroup);
+      }
+      return true;
+    } catch (e) {
+      _errorMessage = 'Erreur lors de la rétrogradation: ${e.toString()}';
       notifyListeners();
       return false;
     }

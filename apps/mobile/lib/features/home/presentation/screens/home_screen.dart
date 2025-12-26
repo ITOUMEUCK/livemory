@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/services/network_service.dart';
+import '../../../../shared/widgets/user/user_avatar.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../groups/presentation/providers/group_provider.dart';
 import '../../../groups/presentation/screens/groups_list_screen.dart';
 import '../../../events/presentation/screens/events_list_screen.dart';
+import '../../../events/presentation/providers/event_provider.dart';
 import '../../../polls/presentation/providers/poll_provider.dart';
 import '../../../polls/domain/entities/poll.dart';
 import '../../../notifications/presentation/providers/notification_provider.dart';
@@ -159,12 +163,23 @@ class _DashboardTabState extends State<_DashboardTab> {
   @override
   void initState() {
     super.initState();
-    // Charger les notifications au démarrage
-    Future.microtask(() {
+    // Charger les notifications, groupes et événements au démarrage
+    Future.microtask(() async {
       final authProvider = context.read<AuthProvider>();
       final userId = authProvider.currentUser?.id ?? '';
       if (userId.isNotEmpty) {
         context.read<NotificationProvider>().fetchNotifications(userId);
+
+        // D'abord charger les groupes
+        final groupProvider = context.read<GroupProvider>();
+        await groupProvider.fetchGroups(userId);
+
+        // Puis charger les événements avec les groupes
+        final userGroupIds = groupProvider.groups.map((g) => g.id).toList();
+        context.read<EventProvider>().fetchEvents(
+          userId: userId,
+          userGroupIds: userGroupIds,
+        );
       }
     });
   }
@@ -255,36 +270,112 @@ class _DashboardTabState extends State<_DashboardTab> {
                 },
               ),
               const SizedBox(height: 12),
-              SizedBox(
-                height: 280,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  children: [
-                    _EventCardHorizontal(
-                      title: 'Week-end à la montagne',
-                      icon: '⛷️',
-                      date: 'Sam 20 - Dim 21 déc',
-                      participants: 8,
-                      onTap: () {},
+              Consumer<EventProvider>(
+                builder: (context, eventProvider, _) {
+                  // Filtrer uniquement les événements actifs (en cours ou à venir)
+                  final now = DateTime.now();
+                  final activeEvents = eventProvider.events.where((event) {
+                    final startDate = event.startDate ?? event.createdAt;
+                    final endDate = event.endDate;
+
+                    // Événement actif si :
+                    // 1. La date de fin est dans le futur (en cours ou futur)
+                    if (endDate != null && endDate.isAfter(now)) {
+                      return true;
+                    }
+
+                    // 2. OU la date de début est dans le futur
+                    if (startDate.isAfter(now)) {
+                      return true;
+                    }
+
+                    // Sinon, l'événement est passé
+                    return false;
+                  }).toList();
+
+                  // Trier par date de début
+                  activeEvents.sort((a, b) {
+                    final aDate = a.startDate ?? a.createdAt;
+                    final bDate = b.startDate ?? b.createdAt;
+                    return aDate.compareTo(bDate);
+                  });
+
+                  if (activeEvents.isEmpty) {
+                    return Container(
+                      height: 200,
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceVariant,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.event_available,
+                              size: 48,
+                              color: AppColors.textSecondary,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Aucun événement actif',
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+
+                  return SizedBox(
+                    height: 280,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: activeEvents.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 12),
+                      itemBuilder: (context, index) {
+                        final event = activeEvents[index];
+                        final startDate = event.startDate ?? event.createdAt;
+                        final endDate = event.endDate;
+
+                        String dateText;
+                        if (endDate != null &&
+                            !_isSameDay(startDate, endDate)) {
+                          dateText =
+                              '${_formatDate(startDate)} - ${_formatDate(endDate)}';
+                        } else {
+                          dateText = _formatDate(startDate);
+                          if (event.startDate != null) {
+                            dateText +=
+                                ' à ${DateFormat('HH:mm').format(startDate)}';
+                          }
+                        }
+
+                        return SizedBox(
+                          width: 280,
+                          child: _EventCardHorizontal(
+                            title: event.title,
+                            description: event.description,
+                            icon: _getEventIcon(event.title),
+                            date: dateText,
+                            creatorId: event.creatorId,
+                            confirmedCount: event.participantIds.length,
+                            maybeCount: event.maybeIds.length,
+                            declinedCount: event.declinedIds.length,
+                            onTap: () {
+                              Navigator.of(context).pushNamed(
+                                AppRoutes.eventDetail,
+                                arguments: event.id,
+                              );
+                            },
+                          ),
+                        );
+                      },
                     ),
-                    const SizedBox(width: 12),
-                    _EventCardHorizontal(
-                      title: 'Soirée jeux',
-                      icon: '🎮',
-                      date: 'Ven 26 déc à 20h',
-                      participants: 5,
-                      onTap: () {},
-                    ),
-                    const SizedBox(width: 12),
-                    _EventCardHorizontal(
-                      title: 'Dîner resto',
-                      icon: '🍽️',
-                      date: 'Sam 27 déc à 19h30',
-                      participants: 6,
-                      onTap: () {},
-                    ),
-                  ],
-                ),
+                  );
+                },
               ),
               const SizedBox(height: 24),
 
@@ -798,16 +889,24 @@ class _PartnerOfferCard extends StatelessWidget {
 /// Widget pour les cartes d'événements horizontales
 class _EventCardHorizontal extends StatelessWidget {
   final String title;
+  final String? description;
   final String icon;
   final String date;
-  final int participants;
+  final String creatorId;
+  final int confirmedCount;
+  final int maybeCount;
+  final int declinedCount;
   final VoidCallback onTap;
 
   const _EventCardHorizontal({
     required this.title,
+    this.description,
     required this.icon,
     required this.date,
-    required this.participants,
+    required this.creatorId,
+    required this.confirmedCount,
+    required this.maybeCount,
+    required this.declinedCount,
     required this.onTap,
   });
 
@@ -823,47 +922,26 @@ class _EventCardHorizontal extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Image en haut avec icône
-              Stack(
-                children: [
-                  Container(
-                    height: 160,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          AppColors.primary.withValues(alpha: 0.3),
-                          AppColors.secondary.withValues(alpha: 0.3),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                    ),
-                    child: Center(
-                      child: Text(icon, style: const TextStyle(fontSize: 64)),
-                    ),
+              // Image en haut avec icône (même style que la liste)
+              Container(
+                height: 140,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.primary.withValues(alpha: 0.3),
+                      AppColors.secondary.withValues(alpha: 0.3),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  // Icône favoris
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.9),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.favorite_border,
-                        size: 20,
-                        color: Colors.black87,
-                      ),
-                    ),
-                  ),
-                ],
+                ),
+                child: Center(
+                  child: Text(icon, style: const TextStyle(fontSize: 56)),
+                ),
               ),
               // Infos en dessous
               Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -873,27 +951,83 @@ class _EventCardHorizontal extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      date,
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.textSecondary,
+                    if (description != null &&
+                        description!.isNotEmpty &&
+                        description != title) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        description!,
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
+                    ],
                     const SizedBox(height: 6),
                     Row(
                       children: [
                         const Icon(
-                          Icons.people,
-                          size: 14,
+                          Icons.person_outline,
+                          size: 13,
                           color: AppColors.textSecondary,
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 3),
                         Text(
-                          '$participants participants',
-                          style: AppTextStyles.bodySmall.copyWith(
+                          'Créé par ',
+                          style: AppTextStyles.labelSmall.copyWith(
                             color: AppColors.textSecondary,
                           ),
+                        ),
+                        Flexible(
+                          child: UserName(
+                            userId: creatorId,
+                            style: AppTextStyles.labelSmall.copyWith(
+                              color: AppColors.textSecondary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.calendar_today,
+                          size: 13,
+                          color: AppColors.textSecondary,
+                        ),
+                        const SizedBox(width: 3),
+                        Flexible(
+                          child: Text(
+                            date,
+                            style: AppTextStyles.labelSmall.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        _ParticipationBadge(
+                          icon: Icons.check_circle,
+                          count: confirmedCount,
+                          color: AppColors.success,
+                        ),
+                        const SizedBox(width: 6),
+                        _ParticipationBadge(
+                          icon: Icons.help_outline,
+                          count: maybeCount,
+                          color: Colors.orange,
+                        ),
+                        const SizedBox(width: 6),
+                        _ParticipationBadge(
+                          icon: Icons.cancel,
+                          count: declinedCount,
+                          color: AppColors.error,
                         ),
                       ],
                     ),
@@ -903,6 +1037,108 @@ class _EventCardHorizontal extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// Helper functions
+bool _isSameDay(DateTime date1, DateTime date2) {
+  return date1.year == date2.year &&
+      date1.month == date2.month &&
+      date1.day == date2.day;
+}
+
+String _formatDate(DateTime date) {
+  final now = DateTime.now();
+  final diff = date.difference(now).inDays;
+
+  if (diff == 0) return 'Aujourd\'hui';
+  if (diff == 1) return 'Demain';
+
+  final weekdays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+  final months = [
+    'jan',
+    'fév',
+    'mar',
+    'avr',
+    'mai',
+    'juin',
+    'juil',
+    'août',
+    'sep',
+    'oct',
+    'nov',
+    'déc',
+  ];
+
+  return '${weekdays[date.weekday - 1]} ${date.day} ${months[date.month - 1]}';
+}
+
+String _getEventIcon(String title) {
+  final lowerTitle = title.toLowerCase();
+
+  if (lowerTitle.contains('anniversaire') || lowerTitle.contains('birthday'))
+    return '🎂';
+  if (lowerTitle.contains('montagne') || lowerTitle.contains('ski'))
+    return '⛷️';
+  if (lowerTitle.contains('jeux') || lowerTitle.contains('game')) return '🎮';
+  if (lowerTitle.contains('resto') ||
+      lowerTitle.contains('dîner') ||
+      lowerTitle.contains('déjeuner'))
+    return '🍽️';
+  if (lowerTitle.contains('voyage') || lowerTitle.contains('trip')) return '✈️';
+  if (lowerTitle.contains('sport') ||
+      lowerTitle.contains('foot') ||
+      lowerTitle.contains('match'))
+    return '⚽';
+  if (lowerTitle.contains('concert') || lowerTitle.contains('musique'))
+    return '🎵';
+  if (lowerTitle.contains('film') || lowerTitle.contains('cinéma')) return '🎬';
+  if (lowerTitle.contains('fête') || lowerTitle.contains('party')) return '🎉';
+  if (lowerTitle.contains('bbq') || lowerTitle.contains('barbecue'))
+    return '🍖';
+  if (lowerTitle.contains('plage') || lowerTitle.contains('beach'))
+    return '🏖️';
+  if (lowerTitle.contains('randonnée') || lowerTitle.contains('hiking'))
+    return '🥾';
+
+  return '📅'; // Icône par défaut
+}
+
+/// Widget pour afficher un badge de participation
+class _ParticipationBadge extends StatelessWidget {
+  final IconData icon;
+  final int count;
+  final Color color;
+
+  const _ParticipationBadge({
+    required this.icon,
+    required this.count,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 4),
+          Text(
+            '$count',
+            style: AppTextStyles.labelSmall.copyWith(
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -97,25 +97,29 @@ class RouteGenerator {
         // Vérifier si c'est une route avec paramètres
         if (settings.name?.startsWith('/groups/') == true &&
             settings.name != AppRoutes.createGroup) {
-          final groupId = settings.name!.split('/').last;
+          final groupId =
+              settings.arguments as String? ?? settings.name!.split('/').last;
           return _buildRoute(GroupDetailScreen(groupId: groupId));
         }
 
         if (settings.name?.startsWith('/events/') == true &&
             settings.name != AppRoutes.createEvent) {
-          final eventId = settings.name!.split('/').last;
+          final eventId =
+              settings.arguments as String? ?? settings.name!.split('/').last;
           return _buildRoute(EventDetailScreen(eventId: eventId));
         }
 
         if (settings.name?.startsWith('/polls/') == true &&
             settings.name != AppRoutes.createPoll) {
-          final pollId = settings.name!.split('/').last;
+          final pollId =
+              settings.arguments as String? ?? settings.name!.split('/').last;
           return _buildRoute(PollDetailScreen(pollId: pollId));
         }
 
         if (settings.name?.startsWith('/budget/') == true &&
             settings.name != AppRoutes.createBudget) {
-          final budgetId = settings.name!.split('/').last;
+          final budgetId =
+              settings.arguments as String? ?? settings.name!.split('/').last;
           return _buildRoute(BudgetDetailScreen(budgetId: budgetId));
         }
 

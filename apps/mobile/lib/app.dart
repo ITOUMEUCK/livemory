@@ -28,13 +28,25 @@ class LivemoryApp extends StatelessWidget {
             return authProvider;
           },
         ),
-        ChangeNotifierProvider(create: (_) => GroupProvider()),
-        ChangeNotifierProvider(create: (_) => EventProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
+        ChangeNotifierProxyProvider<NotificationProvider, GroupProvider>(
+          create: (_) => GroupProvider(),
+          update: (_, notificationProvider, groupProvider) {
+            groupProvider?.setNotificationProvider(notificationProvider);
+            return groupProvider ?? GroupProvider();
+          },
+        ),
+        ChangeNotifierProxyProvider<NotificationProvider, EventProvider>(
+          create: (_) => EventProvider(),
+          update: (_, notificationProvider, eventProvider) {
+            eventProvider?.setNotificationProvider(notificationProvider);
+            return eventProvider ?? EventProvider();
+          },
+        ),
         ChangeNotifierProvider(create: (_) => ActivityProvider()),
         ChangeNotifierProvider(create: (_) => TodoListProvider()),
         ChangeNotifierProvider(create: (_) => PollProvider()),
         ChangeNotifierProvider(create: (_) => BudgetProvider()),
-        ChangeNotifierProvider(create: (_) => NotificationProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],
       child: Consumer<ThemeProvider>(

@@ -43,9 +43,22 @@ class EventActivitiesTabState extends State<EventActivitiesTab> {
   Widget build(BuildContext context) {
     return Consumer<ActivityProvider>(
       builder: (context, activityProvider, _) {
+        print(
+          'EventActivitiesTab: Total activities in provider: ${activityProvider.activities.length}',
+        );
+
         final activities = activityProvider.getActivitiesByEvent(
           widget.eventId,
         );
+
+        print(
+          'EventActivitiesTab: Activities for event ${widget.eventId}: ${activities.length}',
+        );
+        if (activities.isNotEmpty) {
+          print(
+            'EventActivitiesTab: Activities titles: ${activities.map((a) => a.title).toList()}',
+          );
+        }
 
         if (activityProvider.isLoading && activities.isEmpty) {
           return const Center(child: CircularProgressIndicator());
@@ -86,10 +99,34 @@ class EventActivitiesTabState extends State<EventActivitiesTab> {
           itemCount: activities.length,
           itemBuilder: (context, index) {
             final activity = activities[index];
+            final userId = context.read<AuthProvider>().currentUser?.id;
+
             return ActivityCard(
               activity: activity,
+              currentUserId: userId,
               onTap: () => _showActivityDialog(activity),
               onDelete: () => _deleteActivity(activity.id),
+              onToggleParticipation: (activityId, userId) async {
+                final success = await activityProvider
+                    .toggleActivityParticipation(
+                      activityId: activityId,
+                      userId: userId,
+                    );
+                if (success && context.mounted) {
+                  final isParticipating = activity.participantIds.contains(
+                    userId,
+                  );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        isParticipating
+                            ? '✅ Participation confirmée'
+                            : '❌ Participation annulée',
+                      ),
+                    ),
+                  );
+                }
+              },
             );
           },
         );

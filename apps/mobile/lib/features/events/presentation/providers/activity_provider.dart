@@ -21,16 +21,35 @@ class ActivityProvider with ChangeNotifier {
     notifyListeners();
 
     try {
+      print('ActivityProvider: Fetching activities for eventId=$eventId');
       final snapshot = await _firestore
           .collection('activities')
           .where('eventId', isEqualTo: eventId)
-          .orderBy('dateTime')
+          // .orderBy('dateTime') // Retiré : nécessite un index composite
           .get();
 
-      _activities = snapshot.docs
-          .map((doc) => Activity.fromMap(doc.data()))
-          .toList();
+      print('ActivityProvider: Found ${snapshot.docs.length} activities');
+
+      _activities = snapshot.docs.map((doc) {
+        try {
+          final data = doc.data();
+          print('ActivityProvider: Processing activity - ${data['title']}');
+          return Activity.fromMap(data);
+        } catch (e) {
+          print('ActivityProvider ERROR parsing activity: $e');
+          print('ActivityProvider: Document data: ${doc.data()}');
+          rethrow;
+        }
+      }).toList();
+
+      // Trier en mémoire au lieu de dans Firestore
+      _activities.sort((a, b) => a.dateTime.compareTo(b.dateTime));
+
+      print(
+        'ActivityProvider: Successfully loaded ${_activities.length} activities',
+      );
     } catch (e) {
+      print('ActivityProvider ERROR: $e');
       _error = e.toString();
     } finally {
       _isLoading = false;
@@ -94,5 +113,42 @@ class ActivityProvider with ChangeNotifier {
   /// Filtre les activités par événement
   List<Activity> getActivitiesByEvent(String eventId) {
     return _activities.where((a) => a.eventId == eventId).toList();
+  }
+
+  /// Gérer la participation à une activité
+  Future<bool> toggleActivityParticipation({
+    required String activityId,
+    required String userId,
+  }) async {
+    try {
+      final index = _activities.indexWhere((a) => a.id == activityId);
+      if (index == -1) return false;
+
+      final activity = _activities[index];
+      final participantIds = List<String>.from(activity.participantIds);
+
+      // Toggle : si déjà participant, retirer, sinon ajouter
+      if (participantIds.contains(userId)) {
+        participantIds.remove(userId);
+        print('🔴 Utilisateur $userId retiré de l\'activité ${activity.title}');
+      } else {
+        participantIds.add(userId);
+        print('🟢 Utilisateur $userId ajouté à l\'activité ${activity.title}');
+      }
+
+      final updatedActivity = activity.copyWith(
+        participantIds: participantIds,
+        updatedAt: DateTime.now(),
+      );
+
+      await updateActivity(updatedActivity);
+      return true;
+    } catch (e) {
+      print('toggleActivityParticipation ERROR: $e');
+      _error =
+          'Erreur lors de la modification de la participation: ${e.toString()}';
+      notifyListeners();
+      return false;
+    }
   }
 }

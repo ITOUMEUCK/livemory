@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../shared/widgets/user/user_avatar.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../groups/presentation/providers/group_provider.dart';
 import '../providers/todo_list_provider.dart';
@@ -42,6 +43,14 @@ class EventTodosTabState extends State<EventTodosTab> {
       builder: (context, todoProvider, _) {
         final todos = todoProvider.getTodoListsByEvent(widget.eventId);
 
+        print('EventTodosTab: eventId=${widget.eventId}');
+        print(
+          'EventTodosTab: todoProvider.todoLists.length=${todoProvider.todoLists.length}',
+        );
+        print('EventTodosTab: todos.length=${todos.length}');
+        print('EventTodosTab: isLoading=${todoProvider.isLoading}');
+        print('EventTodosTab: error=${todoProvider.error}');
+
         if (todoProvider.isLoading && todos.isEmpty) {
           return const Center(child: CircularProgressIndicator());
         }
@@ -65,7 +74,7 @@ class EventTodosTabState extends State<EventTodosTab> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Créez des listes de tâches pour mieux organiser',
+                  'Seul le créateur peut ajouter une TODO',
                   style: AppTextStyles.bodyMedium.copyWith(
                     color: AppColors.textTertiary,
                   ),
@@ -76,9 +85,16 @@ class EventTodosTabState extends State<EventTodosTab> {
           );
         }
 
+        // Limiter à une seule TODO par événement
+        if (todos.length > 1) {
+          print(
+            '⚠️ AVERTISSEMENT: ${todos.length} TODOs trouvées pour cet événement, seule la première sera affichée',
+          );
+        }
+
         return ListView.builder(
           padding: const EdgeInsets.all(16),
-          itemCount: todos.length,
+          itemCount: 1, // Afficher uniquement la première TODO
           itemBuilder: (context, index) {
             final todo = todos[index];
             return TodoListCard(
@@ -179,8 +195,24 @@ class EventTodosTabState extends State<EventTodosTab> {
                           ),
                           title: Text(task.title),
                           subtitle: task.assignedTo.isNotEmpty
-                              ? Text(
-                                  '${task.assignedTo.length} membre(s) assigné(s)',
+                              ? Wrap(
+                                  spacing: 4,
+                                  runSpacing: 4,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  children: [
+                                    Text(
+                                      'Assigné(s) à : ',
+                                      style: AppTextStyles.bodySmall,
+                                    ),
+                                    ...task.assignedTo.map(
+                                      (userId) => UserName(
+                                        userId: userId,
+                                        style: AppTextStyles.bodySmall.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 )
                               : null,
                           trailing: Row(
@@ -302,9 +334,7 @@ class EventTodosTabState extends State<EventTodosTab> {
                 ...group.memberIds.map((memberId) {
                   final isSelected = selectedMembers.contains(memberId);
                   return CheckboxListTile(
-                    title: Text(
-                      'Membre $memberId',
-                    ), // TODO: Afficher le vrai nom
+                    title: UserName(userId: memberId),
                     value: isSelected,
                     onChanged: (checked) {
                       setState(() {

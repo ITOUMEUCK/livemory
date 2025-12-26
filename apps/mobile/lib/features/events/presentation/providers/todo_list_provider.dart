@@ -17,6 +17,7 @@ class TodoListProvider with ChangeNotifier {
 
   /// Récupère toutes les TODO lists d'un événement
   Future<void> fetchTodoLists(String eventId) async {
+    print('TodoListProvider.fetchTodoLists - Début pour eventId: $eventId');
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -25,13 +26,21 @@ class TodoListProvider with ChangeNotifier {
       final snapshot = await _firestore
           .collection('todoLists')
           .where('eventId', isEqualTo: eventId)
-          .orderBy('createdAt', descending: true)
           .get();
 
-      _todoLists = snapshot.docs
-          .map((doc) => TodoList.fromMap(doc.data()))
-          .toList();
+      print('TodoListProvider: ${snapshot.docs.length} todoLists trouvées');
+
+      _todoLists = snapshot.docs.map((doc) {
+        print('TodoList doc: ${doc.id}');
+        return TodoList.fromMap(doc.data());
+      }).toList();
+
+      // Trier côté client par date de création (plus récents d'abord)
+      _todoLists.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+      print('TodoListProvider: _todoLists.length = ${_todoLists.length}');
     } catch (e) {
+      print('TodoListProvider ERROR: $e');
       _error = e.toString();
     } finally {
       _isLoading = false;

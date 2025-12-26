@@ -5,7 +5,9 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../../shared/widgets/common/common_widgets.dart';
+import '../../../../shared/widgets/user/user_avatar.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../groups/presentation/providers/group_provider.dart';
 import '../providers/event_provider.dart';
 import '../../domain/entities/event.dart';
 
@@ -25,10 +27,26 @@ class _EventsListScreenState extends State<EventsListScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final userId = context.read<AuthProvider>().currentUser?.id;
       if (userId != null) {
-        context.read<EventProvider>().fetchEvents(userId: userId);
+        final groupProvider = context.read<GroupProvider>();
+
+        // Charger les groupes d'abord si nécessaire
+        if (groupProvider.groups.isEmpty) {
+          await groupProvider.fetchGroups(userId);
+        }
+
+        final userGroupIds = groupProvider.groups.map((g) => g.id).toList();
+        print(
+          'EventsListScreen: Chargement des événements pour userId=$userId',
+        );
+        print('EventsListScreen: Groupes de l\'utilisateur: $userGroupIds');
+
+        await context.read<EventProvider>().fetchEvents(
+          userId: userId,
+          userGroupIds: userGroupIds,
+        );
       }
     });
   }
@@ -55,7 +73,7 @@ class _EventsListScreenState extends State<EventsListScreen>
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
-            Tab(text: 'À venir'),
+            Tab(text: 'Actifs'),
             Tab(text: 'Passés'),
           ],
         ),
@@ -72,7 +90,14 @@ class _EventsListScreenState extends State<EventsListScreen>
               onRetry: () {
                 final userId = context.read<AuthProvider>().currentUser?.id;
                 if (userId != null) {
-                  eventProvider.fetchEvents(userId: userId);
+                  final groupProvider = context.read<GroupProvider>();
+                  final userGroupIds = groupProvider.groups
+                      .map((g) => g.id)
+                      .toList();
+                  eventProvider.fetchEvents(
+                    userId: userId,
+                    userGroupIds: userGroupIds,
+                  );
                 }
               },
             );
@@ -100,12 +125,13 @@ class _EventsListScreenState extends State<EventsListScreen>
   }
 
   Widget _buildUpcomingEvents(EventProvider eventProvider) {
-    final upcomingEvents = eventProvider.upcomingEvents;
+    final userId = context.read<AuthProvider>().currentUser?.id ?? '';
+    final upcomingEvents = eventProvider.getUpcomingEventsForUser(userId);
 
     if (upcomingEvents.isEmpty) {
       return EmptyState(
         icon: Icons.event_available,
-        title: 'Aucun événement à venir',
+        title: 'Aucun événement actif',
         subtitle: 'Créez votre premier événement pour commencer !',
         actionLabel: 'Créer un événement',
         onAction: () {
@@ -118,7 +144,12 @@ class _EventsListScreenState extends State<EventsListScreen>
       onRefresh: () {
         final userId = context.read<AuthProvider>().currentUser?.id;
         if (userId != null) {
-          return eventProvider.fetchEvents(userId: userId);
+          final groupProvider = context.read<GroupProvider>();
+          final userGroupIds = groupProvider.groups.map((g) => g.id).toList();
+          return eventProvider.fetchEvents(
+            userId: userId,
+            userGroupIds: userGroupIds,
+          );
         }
         return Future.value();
       },
@@ -243,7 +274,7 @@ class _EventCard extends StatelessWidget {
                             ),
                           ),
                         )
-                      : _StatusBadge(status: event.status),
+                      : _StatusBadge(status: _getEventDisplayStatus(event)),
                 ),
               ],
             ),
@@ -270,6 +301,32 @@ class _EventCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.person_outline,
+                        size: 14,
+                        color: AppColors.textSecondary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Créé par ',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      Flexible(
+                        child: UserName(
+                          userId: event.creatorId,
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
@@ -453,4 +510,38 @@ class _ParticipationChip extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Calculer le statut d'affichage d'un événement
+EventStatus _getEventDisplayStatus(Event event) {
+  final now = DateTime.now();
+  final startDate = event.startDate ?? event.createdAt;
+  final endDate = event.endDate;
+
+  // Si annulé ou brouillon, garder le statut original
+  if (event.status == EventStatus.cancelled ||
+      event.status == EventStatus.draft) {
+    return event.status;
+  }
+
+  // Si la date de fin existe
+  if (endDate != null) {
+    // Événement terminé
+    if (endDate.isBefore(now)) {
+      return EventStatus.completed;
+    }
+    // Événement en cours (a commencé mais pas fini)
+    if (startDate.isBefore(now) && endDate.isAfter(now)) {
+      return EventStatus.ongoing;
+    }
+    // Événement à venir
+    return EventStatus.planned;
+  }
+
+  // Si pas de date de fin, se baser sur la date de début
+  if (startDate.isBefore(now)) {
+    return EventStatus.completed;
+  }
+
+  return EventStatus.planned;
 }

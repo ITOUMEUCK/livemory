@@ -3,10 +3,14 @@ import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/routes/app_routes.dart';
+import '../../../../shared/widgets/user/user_avatar.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../events/presentation/providers/event_provider.dart';
 import '../providers/group_provider.dart';
 import '../../domain/entities/group.dart';
 import 'add_members_screen.dart';
 import 'edit_group_screen.dart';
+import 'manage_members_screen.dart';
 
 /// Écran détail d'un groupe
 class GroupDetailScreen extends StatelessWidget {
@@ -16,12 +20,33 @@ class GroupDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    print('=== GroupDetailScreen ===');
+    print('groupId reçu: $groupId');
+
+    final currentUserId = context.watch<AuthProvider>().currentUser?.id;
+
     return Consumer<GroupProvider>(
       builder: (context, groupProvider, child) {
+        print('Nombre de groupes disponibles: ${groupProvider.groups.length}');
+        print(
+          'IDs des groupes: ${groupProvider.groups.map((g) => '${g.id}: ${g.name}').join(', ')}',
+        );
+
         final group = groupProvider.groups.firstWhere(
           (g) => g.id == groupId,
-          orElse: () => groupProvider.groups.first,
+          orElse: () {
+            print('ERREUR: Groupe $groupId non trouvé !');
+            // Retourner un groupe par défaut pour éviter le crash
+            return groupProvider.groups.isNotEmpty
+                ? groupProvider.groups.first
+                : throw Exception('Aucun groupe disponible');
+          },
         );
+
+        print('Groupe affiché: ${group.name} (${group.id})');
+
+        final isAdmin =
+            currentUserId != null && group.adminIds.contains(currentUserId);
 
         return Scaffold(
           body: CustomScrollView(
@@ -47,32 +72,40 @@ class GroupDetailScreen extends StatelessWidget {
                       ],
 
                       // Stats rapides
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _StatCard(
-                              icon: Icons.people,
-                              label: 'Membres',
-                              value: '${group.memberCount}',
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _StatCard(
-                              icon: Icons.event,
-                              label: 'Événements',
-                              value: '0', // TODO: Compter les vrais événements
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _StatCard(
-                              icon: Icons.admin_panel_settings,
-                              label: 'Admins',
-                              value: '${group.adminIds.length}',
-                            ),
-                          ),
-                        ],
+                      Consumer<EventProvider>(
+                        builder: (context, eventProvider, _) {
+                          final groupEvents = eventProvider.events
+                              .where((e) => e.groupId == group.id)
+                              .toList();
+
+                          return Row(
+                            children: [
+                              Expanded(
+                                child: _StatCard(
+                                  icon: Icons.people,
+                                  label: 'Membres',
+                                  value: '${group.memberCount}',
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _StatCard(
+                                  icon: Icons.event,
+                                  label: 'Événements',
+                                  value: '${groupEvents.length}',
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _StatCard(
+                                  icon: Icons.admin_panel_settings,
+                                  label: 'Admins',
+                                  value: '${group.adminIds.length}',
+                                ),
+                              ),
+                            ],
+                          );
+                        },
                       ),
                       const SizedBox(height: 24),
 
@@ -94,10 +127,13 @@ class GroupDetailScreen extends StatelessWidget {
                         label: 'Inviter des membres',
                         color: AppColors.secondary,
                         onTap: () {
+                          print('=== Navigation vers AddMembersScreen ===');
+                          print('groupId param: $groupId');
+                          print('group.id: ${group.id}');
                           Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (context) =>
-                                  AddMembersScreen(groupId: groupId),
+                                  AddMembersScreen(groupId: group.id),
                             ),
                           );
                         },
@@ -114,9 +150,14 @@ class GroupDetailScreen extends StatelessWidget {
                           ),
                           TextButton(
                             onPressed: () {
-                              // TODO: Afficher tous les membres
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      ManageMembersScreen(groupId: group.id),
+                                ),
+                              );
                             },
-                            child: const Text('Voir tout'),
+                            child: Text(isAdmin ? 'Gérer' : 'Voir tout'),
                           ),
                         ],
                       ),
@@ -359,40 +400,22 @@ class _MemberAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Stack(
-          children: [
-            CircleAvatar(
-              radius: 24,
-              backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-              child: Text(
-                userId[0].toUpperCase(),
-                style: AppTextStyles.titleMedium.copyWith(
-                  color: AppColors.primary,
-                ),
+    return UserAvatar(
+      userId: userId,
+      radius: 24,
+      showName: true,
+      badge: isAdmin
+          ? Container(
+              width: 16,
+              height: 16,
+              decoration: BoxDecoration(
+                color: AppColors.secondary,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 2),
               ),
-            ),
-            if (isAdmin)
-              Positioned(
-                bottom: 0,
-                right: 0,
-                child: Container(
-                  width: 16,
-                  height: 16,
-                  decoration: BoxDecoration(
-                    color: AppColors.secondary,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
-                  ),
-                  child: const Icon(Icons.star, size: 10, color: Colors.white),
-                ),
-              ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text('User ${userId.substring(5)}', style: AppTextStyles.labelSmall),
-      ],
+              child: const Icon(Icons.star, size: 10, color: Colors.white),
+            )
+          : null,
     );
   }
 }

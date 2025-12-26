@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_contacts/flutter_contacts.dart';
+import 'package:flutter_contacts/flutter_contacts.dart' hide Group;
 import 'package:permission_handler/permission_handler.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -8,6 +8,7 @@ import '../../../../shared/widgets/buttons/buttons.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../providers/group_provider.dart';
 import '../../../../core/services/firestore_service.dart';
+import '../../domain/entities/group.dart' as app_group;
 
 /// Écran pour ajouter des membres à un groupe
 class AddMembersScreen extends StatefulWidget {
@@ -54,30 +55,67 @@ class _AddMembersScreenState extends State<AddMembersScreen>
     });
 
     try {
+      print('=== Début chargement des utilisateurs ===');
       final firestoreService = FirestoreService();
-      final querySnapshot = await firestoreService.readAll('users');
-
       final currentUserId = context.read<AuthProvider>().currentUser?.id;
-      final group = context.read<GroupProvider>().groups.firstWhere(
-        (g) => g.id == widget.groupId,
+      print('CurrentUserId: $currentUserId');
+
+      // Charger les groupes si nécessaire
+      final groupProvider = context.read<GroupProvider>();
+      if (groupProvider.groups.isEmpty && currentUserId != null) {
+        print('Chargement des groupes...');
+        await groupProvider.fetchGroups(currentUserId);
+      }
+
+      print('Nombre de groupes: ${groupProvider.groups.length}');
+      print(
+        'IDs des groupes: ${groupProvider.groups.map((g) => g.id).toList()}',
       );
+      print('GroupId recherché: ${widget.groupId}');
+
+      // Trouver le groupe
+      app_group.Group? group;
+      try {
+        group = groupProvider.groups.firstWhere((g) => g.id == widget.groupId);
+        print(
+          'Groupe trouvé: "${group.name}", membres actuels: ${group.memberIds}',
+        );
+      } catch (e) {
+        print('ERREUR: Groupe ${widget.groupId} non trouvé dans la liste !');
+        print(
+          'Groupes disponibles: ${groupProvider.groups.map((g) => '${g.id}: ${g.name}').join(', ')}',
+        );
+        throw Exception('Groupe ${widget.groupId} non trouvé');
+      }
+
+      print('Lecture de la collection users...');
+      final querySnapshot = await firestoreService.readAll('users');
+      print('Nombre total d\'utilisateurs: ${querySnapshot.docs.length}');
+
+      if (group == null) {
+        throw Exception('Groupe non défini');
+      }
 
       _appUsers = querySnapshot.docs
           .where(
             (doc) =>
-                doc.id != currentUserId && !group.memberIds.contains(doc.id),
+                doc.id != currentUserId && !group!.memberIds.contains(doc.id),
           )
           .map((doc) {
             final data = doc.data() as Map<String, dynamic>?;
-            return {
+            final user = {
               'id': doc.id,
-              'name': data?['firstName'] ?? 'Utilisateur',
+              'name': data?['firstName'] ?? data?['name'] ?? 'Utilisateur',
               'email': data?['email'] ?? '',
               'photoUrl': data?['photoUrl'],
             };
+            print('User ajouté: ${user['name']} (${user['id']})');
+            return user;
           })
           .toList();
 
+      print('Nombre d\'utilisateurs à afficher: ${_appUsers.length}');
+      print('=== Fin chargement des utilisateurs ===');
       setState(() => _isLoadingUsers = false);
     } catch (e) {
       setState(() {
@@ -131,19 +169,64 @@ class _AddMembersScreenState extends State<AddMembersScreen>
       return;
     }
 
-    final groupProvider = context.read<GroupProvider>();
-    final success = await groupProvider.addMembers(
-      widget.groupId,
-      _selectedUserIds.toList(),
+    // Afficher un indicateur de chargement
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
     );
 
-    if (success && mounted) {
-      Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${_selectedUserIds.length} membre(s) ajouté(s)'),
-        ),
+    try {
+      final groupProvider = context.read<GroupProvider>();
+      final currentUserId = context.read<AuthProvider>().currentUser?.id;
+
+      print(
+        'Ajout de ${_selectedUserIds.length} membres au groupe ${widget.groupId}',
       );
+      print('IDs des membres: $_selectedUserIds');
+
+      final success = await groupProvider.addMembers(
+        widget.groupId,
+        _selectedUserIds.toList(),
+        invitedBy: currentUserId,
+      );
+
+      if (mounted) {
+        Navigator.of(context).pop(); // Fermer le dialogue de chargement
+
+        if (success) {
+          Navigator.of(context).pop(); // Retour à l'écran précédent
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '${_selectedUserIds.length} membre(s) ajouté(s) avec succès',
+              ),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                groupProvider.errorMessage ??
+                    'Erreur lors de l\'ajout des membres',
+              ),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop(); // Fermer le dialogue de chargement
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+      print('Erreur lors de l\'ajout des membres: $e');
     }
   }
 
@@ -208,6 +291,14 @@ class _AddMembersScreenState extends State<AddMembersScreen>
           ),
         ],
       ),
+      floatingActionButton: _selectedUserIds.isNotEmpty
+          ? FloatingActionButton.extended(
+              onPressed: _addMembers,
+              icon: const Icon(Icons.person_add),
+              label: Text('Ajouter (${_selectedUserIds.length})'),
+              backgroundColor: AppColors.primary,
+            )
+          : null,
     );
   }
 

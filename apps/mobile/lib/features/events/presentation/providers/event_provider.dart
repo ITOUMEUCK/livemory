@@ -2,10 +2,19 @@ import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../domain/entities/event.dart';
 import '../../../../core/services/firestore_service.dart';
+import '../../../notifications/presentation/providers/notification_provider.dart';
+import '../../../notifications/domain/entities/notification.dart'
+    as app_notification;
 
 /// Provider pour gérer l'état des événements
 class EventProvider extends ChangeNotifier {
   final FirestoreService _firestoreService = FirestoreService();
+  NotificationProvider? _notificationProvider;
+
+  // Injecter le NotificationProvider
+  void setNotificationProvider(NotificationProvider provider) {
+    _notificationProvider = provider;
+  }
 
   List<Event> _events = [];
   bool _isLoading = false;
@@ -15,49 +24,109 @@ class EventProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  /// Récupérer tous les événements (ou par groupe, ou par participant)
-  Future<void> fetchEvents({String? groupId, String? userId}) async {
+  /// Récupérer tous les événements accessibles à l'utilisateur
+  /// (événements où il est participant OU événements des groupes dont il est membre)
+  Future<void> fetchEvents({
+    String? groupId,
+    String? userId,
+    List<String>? userGroupIds,
+  }) async {
+    print('EventProvider.fetchEvents - Début');
+    print('  groupId: $groupId');
+    print('  userId: $userId');
+    print('  userGroupIds: $userGroupIds');
+
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      QuerySnapshot querySnapshot;
-
       if (groupId != null) {
         // Récupérer les événements d'un groupe spécifique
-        querySnapshot = await _firestoreService.query(
+        print('  Mode: événements d\'un groupe spécifique');
+        final querySnapshot = await _firestoreService.query(
           'events',
           field: 'groupId',
           isEqualTo: groupId,
           orderBy: 'startDate',
           descending: false,
         );
+        _events = querySnapshot.docs.map(_eventFromFirestore).toList();
+        print('  Événements trouvés: ${_events.length}');
       } else if (userId != null) {
-        // Récupérer les événements où l'utilisateur est participant
-        querySnapshot = await _firestoreService.query(
+        print('  Mode: tous les événements de l\'utilisateur');
+        // Charger tous les événements accessibles à l'utilisateur
+        final allEvents = <Event>[];
+
+        // 1. Événements où l'utilisateur est participant
+        print('  1. Recherche événements où userId est participant...');
+        print('  1. Recherche événements où userId est participant...');
+        final participantQuery = await _firestoreService.query(
           'events',
           field: 'participantIds',
           arrayContains: userId,
-          orderBy: 'startDate',
-          descending: false,
         );
+        allEvents.addAll(participantQuery.docs.map(_eventFromFirestore));
+        print('     -> ${participantQuery.docs.length} événements trouvés');
+
+        // 2. Événements des groupes dont l'utilisateur est membre
+        if (userGroupIds != null && userGroupIds.isNotEmpty) {
+          print('  2. Recherche événements des groupes: $userGroupIds');
+          for (final groupId in userGroupIds) {
+            print('     Groupe $groupId...');
+            final groupEventsQuery = await _firestoreService.query(
+              'events',
+              field: 'groupId',
+              isEqualTo: groupId,
+            );
+            print('       -> ${groupEventsQuery.docs.length} événements');
+            final groupEvents = groupEventsQuery.docs
+                .map(_eventFromFirestore)
+                .toList();
+            // Ajouter seulement les événements qui ne sont pas déjà dans la liste
+            for (final event in groupEvents) {
+              if (!allEvents.any((e) => e.id == event.id)) {
+                allEvents.add(event);
+                print('       Ajouté: ${event.title}');
+              } else {
+                print('       Déjà présent: ${event.title}');
+              }
+            }
+          }
+        } else {
+          print('  2. Aucun groupe fourni, skip recherche par groupes');
+        }
+
+        print('  Total événements avant tri: ${allEvents.length}');
+
+        print('  Total événements avant tri: ${allEvents.length}');
+
+        // Trier par date
+        allEvents.sort((a, b) {
+          final aDate = a.startDate ?? a.createdAt;
+          final bDate = b.startDate ?? b.createdAt;
+          return aDate.compareTo(bDate);
+        });
+
+        _events = allEvents;
+        print('  Total événements final: ${_events.length}');
       } else {
+        print('  Mode: tous les événements (pas de filtre)');
         // Récupérer tous les événements
-        querySnapshot = await _firestoreService.query(
+        final querySnapshot = await _firestoreService.query(
           'events',
           orderBy: 'startDate',
           descending: false,
         );
+        _events = querySnapshot.docs.map(_eventFromFirestore).toList();
+        print('  Événements trouvés: ${_events.length}');
       }
-
-      _events = querySnapshot.docs.map((doc) {
-        return _eventFromFirestore(doc);
-      }).toList();
 
       _isLoading = false;
       notifyListeners();
+      print('EventProvider.fetchEvents - Fin avec succès');
     } catch (e) {
+      print('EventProvider.fetchEvents - ERREUR: $e');
       _isLoading = false;
       _errorMessage =
           'Erreur lors du chargement des événements: ${e.toString()}';
@@ -111,6 +180,43 @@ class EventProvider extends ChangeNotifier {
       );
 
       _events.insert(0, newEvent);
+
+      // Notifier tous les membres du groupe de la création de l'événement
+      if (_notificationProvider != null) {
+        print(
+          'EventProvider: Envoi des notifications aux membres du groupe $groupId',
+        );
+        final groupDoc = await _firestoreService.read('groups', groupId);
+        if (groupDoc.exists) {
+          final groupData = groupDoc.data() as Map<String, dynamic>;
+          final groupName = groupData['name'] as String;
+          final memberIds = List<String>.from(groupData['memberIds'] ?? []);
+
+          // Notifier tous les membres sauf le créateur
+          for (final memberId in memberIds) {
+            if (memberId != creatorId) {
+              await _notificationProvider!.createNotification(
+                userId: memberId,
+                type: app_notification.NotificationType.eventUpdate,
+                title: 'Nouvel événement',
+                message:
+                    'Un nouvel événement "$title" a été créé dans le groupe "$groupName"',
+                metadata: {
+                  'eventId': eventId,
+                  'eventTitle': title,
+                  'groupId': groupId,
+                  'groupName': groupName,
+                  'creatorId': creatorId,
+                },
+              );
+            }
+          }
+          print(
+            'EventProvider: ${memberIds.length - 1} notifications envoyées',
+          );
+        }
+      }
+
       _isLoading = false;
       notifyListeners();
       return newEvent;
@@ -195,10 +301,19 @@ class EventProvider extends ChangeNotifier {
     required ParticipationStatus status,
   }) async {
     try {
+      print('respondToEvent: eventId=$eventId, userId=$userId, status=$status');
+
       final index = _events.indexWhere((e) => e.id == eventId);
-      if (index == -1) return false;
+      if (index == -1) {
+        print('respondToEvent: Événement non trouvé');
+        return false;
+      }
 
       final event = _events[index];
+      print('respondToEvent: Événement trouvé - ${event.title}');
+      print('  participantIds avant: ${event.participantIds}');
+      print('  maybeIds avant: ${event.maybeIds}');
+      print('  declinedIds avant: ${event.declinedIds}');
 
       // Retirer l'utilisateur de toutes les listes
       final newParticipantIds = List<String>.from(event.participantIds)
@@ -211,14 +326,21 @@ class EventProvider extends ChangeNotifier {
       switch (status) {
         case ParticipationStatus.participating:
           newParticipantIds.add(userId);
+          print('  ✅ Ajouté à participantIds');
           break;
         case ParticipationStatus.maybe:
           newMaybeIds.add(userId);
+          print('  🤔 Ajouté à maybeIds');
           break;
         case ParticipationStatus.declined:
           newDeclinedIds.add(userId);
+          print('  ❌ Ajouté à declinedIds');
           break;
       }
+
+      print('  participantIds après: $newParticipantIds');
+      print('  maybeIds après: $newMaybeIds');
+      print('  declinedIds après: $newDeclinedIds');
 
       final updatedEvent = event.copyWith(
         participantIds: newParticipantIds,
@@ -227,8 +349,11 @@ class EventProvider extends ChangeNotifier {
         updatedAt: DateTime.now(),
       );
 
-      return await updateEvent(updatedEvent);
+      final result = await updateEvent(updatedEvent);
+      print('respondToEvent: Mise à jour réussie = $result');
+      return result;
     } catch (e) {
+      print('respondToEvent ERROR: $e');
       _errorMessage =
           'Erreur lors de la réponse à l\'événement: ${e.toString()}';
       notifyListeners();
@@ -241,13 +366,61 @@ class EventProvider extends ChangeNotifier {
     return _events.where((e) => e.groupId == groupId).toList();
   }
 
-  /// Récupérer les événements à venir
+  /// Récupérer les événements à venir et en cours (excluant ceux refusés par l'utilisateur)
+  List<Event> getUpcomingEventsForUser(String userId) {
+    final now = DateTime.now();
+    return _events.where((e) {
+      // Exclure les événements refusés par cet utilisateur
+      if (e.declinedIds.contains(userId)) {
+        return false;
+      }
+
+      final startDate = e.startDate ?? e.createdAt;
+      final endDate = e.endDate;
+
+      // Événement à venir/en cours si :
+      // 1. Il a une date de fin et elle est dans le futur (événement en cours ou futur)
+      if (endDate != null && endDate.isAfter(now)) {
+        return true;
+      }
+
+      // 2. OU il a une date de début future
+      if (e.startDate != null && e.startDate!.isAfter(now)) {
+        return true;
+      }
+
+      return false;
+    }).toList()..sort((a, b) {
+      final aDate = a.startDate ?? a.createdAt;
+      final bDate = b.startDate ?? b.createdAt;
+      return aDate.compareTo(bDate);
+    });
+  }
+
+  /// Récupérer les événements à venir (et en cours)
   List<Event> get upcomingEvents {
     final now = DateTime.now();
-    return _events
-        .where((e) => e.startDate != null && e.startDate!.isAfter(now))
-        .toList()
-      ..sort((a, b) => a.startDate!.compareTo(b.startDate!));
+    return _events.where((e) {
+      final startDate = e.startDate ?? e.createdAt;
+      final endDate = e.endDate;
+
+      // Événement à venir/en cours si :
+      // 1. Il a une date de fin et elle est dans le futur (événement en cours ou futur)
+      if (endDate != null && endDate.isAfter(now)) {
+        return true;
+      }
+
+      // 2. OU il a une date de début future
+      if (e.startDate != null && e.startDate!.isAfter(now)) {
+        return true;
+      }
+
+      return false;
+    }).toList()..sort((a, b) {
+      final aDate = a.startDate ?? a.createdAt;
+      final bDate = b.startDate ?? b.createdAt;
+      return aDate.compareTo(bDate);
+    });
   }
 
   /// Récupérer les événements passés

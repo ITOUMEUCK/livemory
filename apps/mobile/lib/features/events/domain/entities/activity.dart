@@ -7,6 +7,7 @@ class Activity {
   final DateTime dateTime;
   final String? location;
   final String createdBy;
+  final List<String> participantIds; // Liste des participants confirmés
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -18,6 +19,7 @@ class Activity {
     required this.dateTime,
     this.location,
     required this.createdBy,
+    this.participantIds = const [],
     required this.createdAt,
     required this.updatedAt,
   });
@@ -31,6 +33,7 @@ class Activity {
     DateTime? dateTime,
     String? location,
     String? createdBy,
+    List<String>? participantIds,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -42,6 +45,7 @@ class Activity {
       dateTime: dateTime ?? this.dateTime,
       location: location ?? this.location,
       createdBy: createdBy ?? this.createdBy,
+      participantIds: participantIds ?? this.participantIds,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -57,6 +61,7 @@ class Activity {
       'dateTime': dateTime.toIso8601String(),
       'location': location,
       'createdBy': createdBy,
+      'participantIds': participantIds,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -64,16 +69,31 @@ class Activity {
 
   /// Crée depuis un Map Firestore
   factory Activity.fromMap(Map<String, dynamic> map) {
-    return Activity(
-      id: map['id'] as String,
-      eventId: map['eventId'] as String,
-      title: map['title'] as String,
-      description: map['description'] as String?,
-      dateTime: DateTime.parse(map['dateTime'] as String),
-      location: map['location'] as String?,
-      createdBy: map['createdBy'] as String,
-      createdAt: DateTime.parse(map['createdAt'] as String),
-      updatedAt: DateTime.parse(map['updatedAt'] as String),
-    );
+    try {
+      return Activity(
+        id: map['id'] as String? ?? '',
+        eventId: map['eventId'] as String? ?? '',
+        title: map['title'] as String? ?? 'Sans titre',
+        description: map['description'] as String?,
+        dateTime: map['dateTime'] != null
+            ? DateTime.parse(map['dateTime'] as String)
+            : DateTime.now(),
+        location: map['location'] as String?,
+        createdBy: map['createdBy'] as String? ?? '',
+        participantIds: map['participantIds'] != null
+            ? List<String>.from(map['participantIds'])
+            : [],
+        createdAt: map['createdAt'] != null
+            ? DateTime.parse(map['createdAt'] as String)
+            : DateTime.now(),
+        updatedAt: map['updatedAt'] != null
+            ? DateTime.parse(map['updatedAt'] as String)
+            : DateTime.now(),
+      );
+    } catch (e) {
+      print('Error parsing Activity from map: $e');
+      print('Map content: $map');
+      rethrow;
+    }
   }
 }

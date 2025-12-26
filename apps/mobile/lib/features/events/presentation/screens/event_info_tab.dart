@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/routes/app_routes.dart';
+import '../../../../shared/widgets/user/user_avatar.dart';
 import '../../domain/entities/event.dart';
 import '../providers/event_provider.dart';
 
@@ -164,6 +165,39 @@ class EventInfoTab extends StatelessWidget {
           ),
           const SizedBox(height: 24),
 
+          // Liste détaillée des participants
+          if (event.participantIds.isNotEmpty) ...[
+            _ParticipantSection(
+              title: 'Confirmés (${event.participantIds.length})',
+              userIds: event.participantIds,
+              icon: Icons.check_circle,
+              color: AppColors.success,
+            ),
+            const SizedBox(height: 16),
+          ],
+
+          if (event.maybeIds.isNotEmpty) ...[
+            _ParticipantSection(
+              title: 'Peut-être (${event.maybeIds.length})',
+              userIds: event.maybeIds,
+              icon: Icons.help_outline,
+              color: Colors.orange,
+            ),
+            const SizedBox(height: 16),
+          ],
+
+          if (event.declinedIds.isNotEmpty) ...[
+            _ParticipantSection(
+              title: 'Ont refusé (${event.declinedIds.length})',
+              userIds: event.declinedIds,
+              icon: Icons.cancel,
+              color: AppColors.error,
+            ),
+            const SizedBox(height: 16),
+          ],
+
+          const SizedBox(height: 8),
+
           // Actions
           if (isCreator) ...[
             Text('Actions', style: AppTextStyles.titleMedium),
@@ -310,10 +344,16 @@ class _ParticipationButtons extends StatelessWidget {
             isSelected: isConfirmed,
             color: AppColors.success,
             onTap: () async {
-              // TODO: Implémenter updateParticipation
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Participation mise à jour')),
+              await context.read<EventProvider>().respondToEvent(
+                eventId: event.id,
+                userId: userId,
+                status: ParticipationStatus.participating,
               );
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('✅ Participation confirmée')),
+                );
+              }
             },
           ),
         ),
@@ -325,10 +365,18 @@ class _ParticipationButtons extends StatelessWidget {
             isSelected: isMaybe,
             color: Colors.orange,
             onTap: () async {
-              // TODO: Implémenter updateParticipation
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Participation mise à jour')),
+              await context.read<EventProvider>().respondToEvent(
+                eventId: event.id,
+                userId: userId,
+                status: ParticipationStatus.maybe,
               );
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('🤔 Réponse "Peut-être" enregistrée'),
+                  ),
+                );
+              }
             },
           ),
         ),
@@ -340,10 +388,16 @@ class _ParticipationButtons extends StatelessWidget {
             isSelected: isDeclined,
             color: AppColors.error,
             onTap: () async {
-              // TODO: Implémenter updateParticipation
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Participation mise à jour')),
+              await context.read<EventProvider>().respondToEvent(
+                eventId: event.id,
+                userId: userId,
+                status: ParticipationStatus.declined,
               );
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('❌ Participation refusée')),
+                );
+              }
             },
           ),
         ),
@@ -468,6 +522,66 @@ class _ActionButton extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Section affichant une catégorie de participants
+class _ParticipantSection extends StatelessWidget {
+  final String title;
+  final List<String> userIds;
+  final IconData icon;
+  final Color color;
+
+  const _ParticipantSection({
+    required this.title,
+    required this.userIds,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 20, color: color),
+            const SizedBox(width: 8),
+            Text(title, style: AppTextStyles.titleSmall.copyWith(color: color)),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: userIds.map((userId) {
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: color.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 16, color: color),
+                  const SizedBox(width: 6),
+                  UserName(
+                    userId: userId,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: color,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 }
